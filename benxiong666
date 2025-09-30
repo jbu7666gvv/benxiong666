@@ -478,18 +478,10 @@ local Tab = Window:MakeTab({
 })
 
 Tab:AddButton({
-  Name = "99夜h4x",
+  Name = "启动汉化脚本",
   Default = false,
   Callback = function(Value)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/h4x6/refs/heads/main/h4x%E6%B1%89%E5%8C%96"))()
-  end
-})
-
-Tab:AddButton({
-  Name = "99夜虚空",
-  Default = false,
-  Callback = function(Value)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/xuu/refs/heads/main/xuu"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/benhan/refs/heads/main/benhan"))()
   end
 })
 
@@ -516,7 +508,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/H4xScripts/Loader/ref
 })
 
 Tab:AddButton({
-  Name = "99夜二狗子脚本",
+  Name = "99夜二狗子脚本(国人)(无卡密)",
   Default = false,
   Callback = function(Value)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/shenqin/refs/heads/main/99day.lua"))()
@@ -524,9 +516,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/shenq
 })
 
 Tab:AddButton({
-  Name = "99夜自动捡钻石",
+  Name = "OverHub(刷钻石)(全自动)(无卡密)",
   Default = false,
   Callback = function(Value)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/MQPS7/99-Night-in-the-Forset/refs/heads/main/Gfarm"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/hellattexyss/autofarmdiamonds/main/overhubaurofarm.lua"))()
   end
 })
