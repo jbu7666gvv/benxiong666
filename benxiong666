@@ -481,7 +481,7 @@ Tab:AddButton({
   Name = "启动汉化脚本",
   Default = false,
   Callback = function(Value)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/benhan/refs/heads/main/benhan"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/benhan/main/benhan"))()
   end
 })
 
