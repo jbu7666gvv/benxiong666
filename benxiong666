@@ -500,7 +500,7 @@ local Tab = Window:MakeTab({
 })
 
 Tab:AddButton({
-  Name = "99夜虚空",
+  Name = "99夜虚空(无卡密)",
   Default = false,
   Callback = function(Value)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/main/nightsintheforest.lua", true))()
@@ -508,7 +508,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/m
 })
 
 Tab:AddButton({
-  Name = "99夜H4x(要解卡)",
+  Name = "99夜H4x(要卡密)",
   Default = false,
   Callback = function(Value)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/H4xScripts/Loader/refs/heads/main/loader.lua", true))()
@@ -516,7 +516,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/H4xScripts/Loader/ref
 })
 
 Tab:AddButton({
-  Name = "99夜二狗子脚本(好用)",
+  Name = "99夜二狗子脚本",
   Default = false,
   Callback = function(Value)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/gycgchgyfytdttr/shenqin/refs/heads/main/99day.lua"))()
