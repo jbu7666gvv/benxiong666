@@ -1,1 +1,286 @@
+-- Roblox自动汉化系统
+-- 作者：AI助手
+-- 功能：自动汉化游戏中的英文文本，可开关控制
 
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 汉化词典（你可以根据需要扩展这个词典）
+local translationDict = {
+    -- 基础UI词汇
+    ["Play"] = "开始游戏",
+    ["Start"] = "开始",
+    ["Settings"] = "设置",
+    ["Options"] = "选项",
+    ["Exit"] = "退出",
+    ["Back"] = "返回",
+    ["Continue"] = "继续",
+    ["Yes"] = "是",
+    ["No"] = "否",
+    ["OK"] = "确定",
+    ["Cancel"] = "取消",
+    ["Save"] = "保存",
+    ["Load"] = "加载",
+    ["Reset"] = "重置",
+    
+    -- 游戏相关词汇
+    ["Score"] = "分数",
+    ["Points"] = "点数",
+    ["Level"] = "等级",
+    ["Health"] = "生命值",
+    ["Damage"] = "伤害",
+    ["Attack"] = "攻击",
+    ["Defense"] = "防御",
+    ["Speed"] = "速度",
+    ["Jump"] = "跳跃",
+    ["Run"] = "奔跑",
+    ["Walk"] = "行走",
+    
+    -- 多人游戏词汇
+    ["Player"] = "玩家",
+    ["Players"] = "玩家们",
+    ["Team"] = "队伍",
+    ["Join"] = "加入",
+    ["Leave"] = "离开",
+    ["Ready"] = "准备",
+    ["Waiting"] = "等待中",
+    
+    -- 商店和经济
+    ["Buy"] = "购买",
+    ["Sell"] = "出售",
+    ["Shop"] = "商店",
+    ["Price"] = "价格",
+    ["Coins"] = "金币",
+    ["Money"] = "金钱",
+    ["Currency"] = "货币",
+    
+    -- 时间相关
+    ["Time"] = "时间",
+    ["Minutes"] = "分钟",
+    ["Seconds"] = "秒",
+    ["Hours"] = "小时",
+    
+    -- 社交词汇
+    ["Friend"] = "朋友",
+    ["Friends"] = "朋友们",
+    ["Chat"] = "聊天",
+    ["Message"] = "消息",
+    ["Send"] = "发送"
+}
+
+-- 存储原始文本的表格
+local originalTexts = {}
+local isTranslating = false
+
+-- 创建主UI
+local function createMainUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "AutoTranslatorUI"
+    screenGui.ResetOnSpawn = false
+    
+    -- 主框架
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 300, 0, 180)
+    mainFrame.Position = UDim2.new(0, 20, 0, 20)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+    
+    -- 圆角
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = mainFrame
+    
+    -- 标题
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    title.Text = "自动汉化系统"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextScaled = true
+    title.Font = Enum.Font.GothamBold
+    title.Parent = mainFrame
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 8)
+    titleCorner.Parent = title
+    
+    -- 开关按钮
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0.8, 0, 0, 50)
+    toggleButton.Position = UDim2.new(0.1, 0, 0.3, 0)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    toggleButton.Text = "开启汉化"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextScaled = true
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.Parent = mainFrame
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = toggleButton
+    
+    -- 状态显示
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(0.8, 0, 0, 30)
+    statusLabel.Position = UDim2.new(0.1, 0, 0.7, 0)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "状态: 汉化已关闭"
+    statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statusLabel.TextScaled = true
+    statusLabel.Font = Enum.Font.Gotham
+    statusLabel.Parent = mainFrame
+    
+    -- 开关按钮点击事件
+    toggleButton.MouseButton1Click:Connect(function()
+        isTranslating = not isTranslating
+        
+        if isTranslating then
+            -- 开启汉化
+            toggleButton.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+            toggleButton.Text = "关闭汉化"
+            statusLabel.Text = "状态: 汉化进行中..."
+            
+            -- 开始汉化过程
+            startTranslation()
+        else
+            -- 关闭汉化，恢复原文
+            toggleButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+            toggleButton.Text = "开启汉化"
+            statusLabel.Text = "状态: 汉化已关闭"
+            
+            -- 恢复原始文本
+            restoreOriginalTexts()
+        end
+    end)
+    
+    -- 按钮悬停效果
+    toggleButton.MouseEnter:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(toggleButton, tweenInfo, {BackgroundTransparency = 0.2})
+        tween:Play()
+    end)
+    
+    toggleButton.MouseLeave:Connect(function()
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(toggleButton, tweenInfo, {BackgroundTransparency = 0})
+        tween:Play()
+    end)
+    
+    screenGui.Parent = playerGui
+    return screenGui
+end
+
+-- 翻译单个文本
+local function translateText(text)
+    if type(text) ~= "string" then return text end
+    
+    -- 检查是否已经是翻译过的文本
+    for eng, chn in pairs(translationDict) do
+        if text == chn then
+            return text -- 已经是中文，不需要翻译
+        end
+    end
+    
+    -- 进行翻译
+    local translated = text
+    for eng, chn in pairs(translationDict) do
+        translated = string.gsub(translated, eng, chn)
+        -- 处理首字母大写的情况
+        local capitalizedEng = eng:gsub("^%l", string.upper)
+        local capitalizedChn = chn
+        translated = string.gsub(translated, capitalizedEng, capitalizedChn)
+    end
+    
+    return translated
+end
+
+-- 存储原始文本
+local function storeOriginalText(object, property)
+    if not originalTexts[object] then
+        originalTexts[object] = {}
+    end
+    originalTexts[object][property] = object[property]
+end
+
+-- 处理单个GUI对象
+local function processGUIObject(obj)
+    if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+        local text = obj.Text
+        if text and text ~= "" and translationDict[text] then
+            storeOriginalText(obj, "Text")
+            obj.Text = translationDict[text]
+        elseif text and text ~= "" then
+            -- 检查文本中是否包含需要翻译的单词
+            local hasEnglish = false
+            for eng, chn in pairs(translationDict) do
+                if string.find(text, eng) then
+                    hasEnglish = true
+                    break
+                end
+            end
+            
+            if hasEnglish then
+                storeOriginalText(obj, "Text")
+                obj.Text = translateText(text)
+            end
+        end
+    end
+end
+
+-- 递归处理所有GUI对象
+local function processAllGUIObjects(parent)
+    for _, child in ipairs(parent:GetChildren()) do
+        processGUIObject(child)
+        processAllGUIObjects(child) -- 递归处理子对象
+    end
+end
+
+-- 恢复原始文本
+local function restoreOriginalTexts()
+    for obj, properties in pairs(originalTexts) do
+        if obj and obj.Parent then -- 确保对象仍然存在
+            for property, value in pairs(properties) do
+                pcall(function()
+                    obj[property] = value
+                end)
+            end
+        end
+    end
+    originalTexts = {} -- 清空存储
+end
+
+-- 开始翻译过程
+local function startTranslation()
+    -- 处理现有的GUI
+    local guis = playerGui:GetDescendants()
+    for _, gui in ipairs(guis) do
+        processGUIObject(gui)
+    end
+    
+    -- 监听新创建的GUI对象
+    local connection
+    connection = playerGui.DescendantAdded:Connect(function(descendant)
+        if isTranslating then
+            processGUIObject(descendant)
+        else
+            connection:Disconnect()
+        end
+    end)
+end
+
+-- 初始化系统
+local function initialize()
+    createMainUI()
+    print("自动汉化系统已加载！")
+    print("使用方法：点击界面上的按钮开启/关闭自动汉化")
+    print("当前汉化词汇量：" .. tostring(#translationDict) .. " 个单词")
+end
+
+-- 启动系统
+initialize()
