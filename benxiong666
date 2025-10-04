@@ -2,7 +2,10 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local translationDict = {
+-- 将词典拆分成多个部分
+local translationDictParts = {
+    -- 第一部分：核心游戏对象
+    part1 = {
         ["Player"] = "玩家",
         ["NPC"] = "NPC",
         ["Enemy"] = "敌人",
@@ -55,13 +58,13 @@ local translationDict = {
         ["Mesh"] = "网格",
         ["Part"] = "部件",
         ["BasePart"] = "基础部件",
-
-        -- ===== 地点区域 =====
         ["Warm Place"] = "温暖地点",
         ["Camp"] = "营地",
         ["Fishing Hut"] = "钓鱼小屋",
+    },
 
-        -- ===== 游戏机制 =====
+    -- 第二部分：游戏机制
+    part2 = {
         ["Health"] = "生命值",
         ["Stamina"] = "耐力",
         ["Mana"] = "法力",
@@ -109,8 +112,10 @@ local translationDict = {
         ["Texture"] = "纹理",
         ["Sound"] = "声音",
         ["Music"] = "音乐",
+    },
 
-        -- ===== 界面元素 =====
+    -- 第三部分：界面元素
+    part3 = {
         ["Menu"] = "菜单",
         ["Button"] = "按钮",
         ["Slider"] = "滑块",
@@ -160,8 +165,10 @@ local translationDict = {
         ["Footer"] = "底部",
         ["Sidebar"] = "侧边栏",
         ["Main Content"] = "主要内容",
+    },
 
-        -- ===== 状态消息 =====
+    -- 第四部分：状态和核心功能
+    part4 = {
         ["Enabled"] = "已启用",
         ["Disabled"] = "已禁用",
         ["Active"] = "活跃中",
@@ -181,12 +188,9 @@ local translationDict = {
         ["Ready"] = "就绪",
         ["Value"] = "数值",
         ["Amount"] = "数量",
-
-        -- ===== 错误消息 =====
         ["Error"] = "错误",
         ["Failed"] = "失败",
         ["Warning"] = "警告",
-        ["Critical"] = "严重",
         ["Connection Lost"] = "连接丢失",
         ["Invalid Input"] = "无效输入",
         ["Access Denied"] = "访问拒绝",
@@ -197,8 +201,6 @@ local translationDict = {
         ["Script Error"] = "脚本错误",
         ["Detection"] = "检测到",
         ["Anti-Cheat"] = "反作弊",
-
-        -- ===== 核心功能类别 =====
         ["Automation"] = "自动化",
         ["Fun"] = "娱乐",
         ["Information"] = "信息",
@@ -213,8 +215,10 @@ local translationDict = {
         ["Network Options"] = "网络选项",
         ["Graphics Options"] = "图形选项",
         ["Audio Volume"] = "音频音量",
+    },
 
-        -- ===== 作弊功能相关 =====
+    -- 第五部分：作弊和高级功能
+    part5 = {
         ["Cheat"] = "作弊",
         ["Hack"] = "黑客",
         ["Exploit"] = "漏洞",
@@ -327,1261 +331,11 @@ local translationDict = {
         ["Lag"] = "延迟",
         ["Ping"] = "ping值",
         ["FPS"] = "帧率",
-
-        -- ===== 新增功能 =====
-        ["Child Teleport"] = "子对象传送",
-        ["Chest List"] = "宝箱列表",
-        ["Fishing Success"] = "钓鱼成功率",
-        ["Camp Teleport"] = "营地传送",
-        ["Night Mode"] = "夜间模式",
-        ["Instant Open"] = "立即打开",
-        ["Hitbox Size"] = "命中框大小",
-        ["Entity ESP"] = "实体透视",
-        ["Map Reveal"] = "地图显示",
-        ["Auto Pickup"] = "自动拾取",
-        ["Auto Fill"] = "自动填充",
-        ["Seed Box"] = "种子盒",
-        ["Coin Stack"] = "硬币堆",
-        ["BIG Trees"] = "大树",
-        ["Children [BETA]"] = "子对象[BETA]",
-        ["The Entities"] = "这些实体",
-
-        -- ===== 传送功能 =====
-        ["Child TP"] = "子对象传送",
-        ["Teleport To Chest"] = "传送到宝箱",
-        ["TP to Camp"] = "传送到营地",
-        ["Teleport to Fishing Hut"] = "传送到钓鱼小屋",
-        ["Teleport All Trees"] = "传送所有树木",
-        ["Teleport All BIG Trees"] = "传送所有大树",
-        ["Teleport All Chests"] = "传送所有宝箱",
-        ["Teleport All Children[BETA]"] = "传送所有子对象[BETA]",
-        ["Teleport Entities"] = "传送实体",
-        ["Teleport The Entities"] = "传送这些实体",
-        ["Auto TP to Warm Place"] = "自动传送到温暖地点",
-        ["Auto TP to Camp at Night"] = "夜晚自动传送到营地",
-        ["Auto Pickup Flowers"] = "自动拾取花朵",
-        ["Auto Collect Coin Stacks"] = "自动收集硬币堆",
-        ["Auto Open Seed Boxes"] = "自动打开种子盒",
-        ["Auto Fill Campfire"] = "自动填充营火",
-        ["Auto Farm"] = "自动刷资源",
-        ["Auto Loot"] = "自动拾取",
-        ["Auto Complete"] = "自动完成",
-        ["Auto Quest"] = "自动任务",
-        ["Auto Sell"] = "自动出售",
-        ["Auto Buy"] = "自动购买",
-        ["Auto Craft"] = "自动制作",
-        ["Auto Upgrade"] = "自动升级",
-        ["Auto Equip"] = "自动装备",
-        ["Auto Use"] = "自动使用",
-        ["Auto Drop"] = "自动丢弃",
-        ["Auto Trade"] = "自动交易",
-        ["Auto Accept"] = "自动接受",
-        ["Auto Decline"] = "自动拒绝",
-        ["Auto Reply"] = "自动回复",
-        ["Auto Message"] = "自动消息",
-        ["Auto Follow"] = "自动跟随",
-        ["Auto Avoid"] = "自动躲避",
-        ["Auto Dodge"] = "自动闪避",
-        ["Auto Block"] = "自动格挡",
-        ["Auto Parry"] = "自动招架",
-        ["Auto Counter"] = "自动反击",
-        ["Auto Heal"] = "自动治疗",
-        ["Auto Potion"] = "自动药水",
-        ["Auto Buff"] = "自动增益",
-        ["Auto Debuff"] = "自动减益",
-        ["Auto Cleanse"] = "自动净化",
-        ["Auto Respawn"] = "自动重生",
-        ["Auto Revive"] = "自动复活",
-        ["Auto Save"] = "自动保存",
-        ["Auto Load"] = "自动加载",
-        ["Auto Backup"] = "自动备份",
-        ["Auto Restore"] = "自动恢复",
-        ["Auto Update"] = "自动更新",
-        ["Auto Patch"] = "自动修补",
-        ["Auto Bypass"] = "自动绕过",
-        ["Auto Hide"] = "自动隐藏",
-        ["Auto Show"] = "自动显示",
-        ["Auto Toggle"] = "自动切换",
-        ["Auto Enable"] = "自动启用",
-        ["Auto Disable"] = "自动禁用",
-        ["Auto Activate"] = "自动激活",
-        ["Auto Deactivate"] = "自动停用",
-        ["Auto Execute"] = "自动执行",
-        ["Auto Inject"] = "自动注入",
-        ["Auto Attach"] = "自动附加",
-        ["Auto Detach"] = "自动分离",
-        ["Auto Scan"] = "自动扫描",
-        ["Auto Detect"] = "自动检测",
-        ["Auto Find"] = "自动查找",
-        ["Auto Locate"] = "自动定位",
-        ["Auto Track"] = "自动跟踪",
-        ["Auto Target"] = "自动瞄准",
-        ["Auto Lock"] = "自动锁定",
-        ["Auto Unlock"] = "自动解锁",
-        ["Auto Open"] = "自动打开",
-        ["Auto Close"] = "自动关闭",
-        ["Auto Start"] = "自动开始",
-        ["Auto Stop"] = "自动停止",
-        ["Auto Pause"] = "自动暂停",
-        ["Auto Resume"] = "自动继续",
-        ["Auto Restart"] = "自动重启",
-        ["Auto Reset"] = "自动重置",
-        ["Auto Clear"] = "自动清除",
-        ["Auto Delete"] = "自动删除",
-        ["Auto Remove"] = "自动移除",
-        ["Auto Add"] = "自动添加",
-        ["Auto Insert"] = "自动插入",
-        ["Auto Extract"] = "自动提取",
-        ["Auto Copy"] = "自动复制",
-        ["Auto Paste"] = "自动粘贴",
-        ["Auto Cut"] = "自动剪切",
-        ["Auto Undo"] = "自动撤销",
-        ["Auto Redo"] = "自动重做",
-        ["Auto Save Config"] = "自动保存配置",
-        ["Auto Load Config"] = "自动加载配置",
-        ["Auto Backup Config"] = "自动备份配置",
-        ["Auto Restore Config"] = "自动恢复配置",
-        ["Auto Optimize"] = "自动优化",
-        ["Auto Boost"] = "自动提升",
-        ["Auto Enhance"] = "自动增强",
-        ["Auto Improve"] = "自动改进",
-        ["Auto Fix"] = "自动修复",
-        ["Auto Repair"] = "自动修理",
-        ["Auto Clean"] = "自动清理",
-        ["Auto Organize"] = "自动整理",
-        ["Auto Sort"] = "自动排序",
-        ["Auto Arrange"] = "自动排列",
-        ["Auto Group"] = "自动分组",
-        ["Auto Ungroup"] = "自动取消分组",
-        ["Auto Merge"] = "自动合并",
-        ["Auto Split"] = "自动拆分",
-        ["Auto Combine"] = "自动组合",
-        ["Auto Separate"] = "自动分离",
-        ["Auto Connect"] = "自动连接",
-        ["Auto Disconnect"] = "自动断开",
-        ["Auto Join Server"] = "自动加入服务器",
-        ["Auto Leave Server"] = "自动离开服务器",
-        ["Auto Change Server"] = "自动更换服务器",
-        ["Auto Server Hop"] = "自动切换服务器",
-        ["Instant Kill"] = "一击必杀",
-        ["No Cooldown"] = "无冷却",
-        ["Infinite Jump"] = "无限跳跃",
-        ["Super Speed"] = "超级速度",
-        ["Hitbox Size Multiplier"] = "碰撞箱大小倍数",
-        ["Enable Hitbox Expansion"] = "启用碰撞箱扩展",
-        ["Hitbox Expansion"] = "碰撞箱扩展",
-        ["Kill All"] = "杀死所有",
-        ["Kill Aura"] = "杀戮光环",
-        ["Kill Aura Radius"] = "杀戮光环范围",
-        ["Kill All NPCs"] = "杀死所有NPC",
-        ["Destroy All Bases"] = "摧毁所有基地",
-        ["Delete All Objects"] = "删除所有物体",
-        ["Remove All Obstacles"] = "移除所有障碍物",
-        ["Clear Map"] = "清空地图",
-        ["Reset All Players"] = "重置所有玩家",
-        ["Crash Server"] = "崩溃服务器",
-        ["Lag Server"] = "延迟服务器",
-        ["Server Hop"] = "切换服务器",
-        ["Rejoin Server"] = "重新加入服务器",
-        ["Copy Game ID"] = "复制游戏ID",
-        ["Copy Player ID"] = "复制玩家ID",
-        ["Copy Player Name"] = "复制玩家名字",
-        ["Copy Player Display Name"] = "复制玩家显示名",
-        ["Player List"] = "玩家列表",
-        ["Player ESP"] = "玩家透视",
-        ["Player Tracers"] = "玩家射线",
-        ["Player Names"] = "玩家名字",
-        ["Player Distance"] = "玩家距离",
-        ["Player Health"] = "玩家生命值",
-        ["Player Team"] = "玩家队伍",
-        ["Player Tools"] = "玩家工具",
-        ["Player Inventory"] = "玩家库存",
-        ["Steal Tools"] = "偷取工具",
-        ["Steal Items"] = "偷取物品",
-        ["Steal Money"] = "偷取金钱",
-        ["Drop All Items"] = "丢弃所有物品",
-        ["Duplicate Items"] = "复制物品",
-        ["Infinite Items"] = "无限物品",
-        ["Unlimited Tools"] = "无限工具",
-        ["Get All Items"] = "获取所有物品",
-        ["Get All Tools"] = "获取所有工具",
-        ["Get All Weapons"] = "获取所有武器",
-        ["Get All Pets"] = "获取所有宠物",
-        ["Get All Cosmetics"] = "获取所有装饰品",
-        ["Get All Badges"] = "获取所有徽章",
-        ["Unlock All"] = "解锁所有",
-        ["Unlock All Achievements"] = "解锁所有成就",
-        ["Unlock All Levels"] = "解锁所有等级",
-        ["Unlock All Maps"] = "解锁所有地图",
-        ["Unlock All Characters"] = "解锁所有角色",
-        ["Unlock All Skins"] = "解锁所有皮肤",
-        ["Max Level"] = "最大等级",
-        ["Instant Level Up"] = "立即升级",
-        ["Set Level"] = "设置等级",
-        ["Set Experience"] = "设置经验",
-        ["Add Experience"] = "添加经验",
-        ["Add Money"] = "添加金钱",
-        ["Set Money"] = "设置金钱",
-        ["Remove Money"] = "移除金钱",
-        ["Infinite Money"] = "无限金钱",
-        ["Infinite Gems"] = "无限宝石",
-        ["Infinite Robux"] = "无限Robux",
-        ["Infinite Tokens"] = "无限代币",
-        ["Infinite Points"] = "无限点数",
-        ["Infinite Currency"] = "无限货币",
-        ["No Delay"] = "无延迟",
-        ["Instant Cooldown"] = "立即冷却",
-        ["Reduce Cooldown"] = "减少冷却",
-        ["Increase Rate"] = "增加速率",
-        ["Double Speed"] = "双倍速度",
-        ["Triple Speed"] = "三倍速度",
-        ["10x Speed"] = "10倍速度",
-        ["Custom Speed"] = "自定义速度",
-        ["Set Speed"] = "设置速度",
-        ["Set WalkSpeed"] = "设置行走速度",
-        ["Set JumpPower"] = "设置跳跃力量",
-        ["Set Gravity"] = "设置重力",
-        ["Zero Gravity"] = "零重力",
-        ["Low Gravity"] = "低重力",
-        ["High Gravity"] = "高重力",
-        ["Moon Gravity"] = "月球重力",
-        ["Anti Gravity"] = "反重力",
-        ["No Gravity"] = "无重力",
-        ["Float"] = "漂浮",
-        ["Swim"] = "游泳",
-        ["Sink"] = "下沉",
-        ["Freeze"] = "冻结",
-        ["Unfreeze"] = "解冻",
-        ["Freeze All"] = "冻结所有",
-        ["Freeze Players"] = "冻结玩家",
-        ["Freeze NPCs"] = "冻结NPC",
-        ["Melt All"] = "融化所有",
-        ["Burn All"] = "燃烧所有",
-        ["Explode All"] = "爆炸所有",
-        ["Explode Player"] = "爆炸玩家",
-        ["Explode Self"] = "自爆",
-        ["Big Head"] = "大头模式",
-        ["Small Head"] = "小头模式",
-        ["Tiny Character"] = "迷你角色",
-        ["Giant Character"] = "巨人角色",
-        ["Scale Character"] = "缩放角色",
-        ["Resize Character"] = "调整角色大小",
-        ["Change Appearance"] = "改变外观",
-        ["Custom Appearance"] = "自定义外观",
-        ["Invisible"] = "隐身",
-        ["Visible"] = "可见",
-        ["Transparent"] = "透明",
-        ["Ghost"] = "幽灵",
-        ["Spectate"] = "观察",
-        ["Spectate Player"] = "观察玩家",
-        ["First Person"] = "第一人称",
-        ["Third Person"] = "第三人称",
-        ["Camera View"] = "相机视角",
-        ["Free Camera"] = "自由相机",
-        ["Camera Fly"] = "相机飞行",
-        ["Camera Noclip"] = "相机穿墙",
-        ["Zoom In"] = "放大",
-        ["Zoom Out"] = "缩小",
-        ["Reset Camera"] = "重置相机",
-        ["Camera Offset"] = "相机偏移",
-        ["FOV Changer"] = "视野修改器",
-        ["Field of View"] = "视野",
-        ["Depth of Field"] = "景深",
-        ["Blur Effect"] = "模糊效果",
-        ["Bloom Effect"] = "泛光效果",
-        ["Color Correction"] = "颜色校正",
-        ["Brightness"] = "亮度",
-        ["Unload Script"] = "卸载脚本",
-        ["Open Keybind Menu"] = "打开按键绑定菜单",
-        ["Custom Cursor"] = "自定义光标",
-        ["Notification Side"] = "通知位置",
-        ["Right"] = "右侧",
-        ["DPI Scale"] = "DPI缩放",
-        ["100%"] = "100%",
-        ["Menu Keybind"] = "菜单按键绑定",
-        ["RightControl"] = "右Ctrl键",
-        ["Load theme"] = "加载主题",
-        ["Search"] = "搜索",
-        ["Autowin"] = "自动获胜",
-        ["Misc"] = "杂项",
-        ["Credits & Server"] = "制作人员 & 服务器",
-        ["Changelog"] = "更新日志",
-        ["UI Settings"] = "界面设置",
-        ["Overwrite theme"] = "覆盖主题",
-        ["Delete theme"] = "删除主题",
-        ["Refresh list"] = "刷新列表",
-        ["Set as default"] = "设为默认",
-        ["Reset default"] = "重置默认",
-        ["Load config"] = "加载配置",
-        ["Overwrite config"] = "覆盖配置",
-        ["Delete config"] = "删除配置",
-        ["Set as autoload"] = "设为自动加载",
-        ["Reset autoload"] = "重置自动加载",
-        ["Current autoload config:none"] = "当前自动加载配置：无",
-        ["Default"] = "默认",
-        ["Custom theme name"] = "自定义主题名称",
-        ["Create theme"] = "创建主题",
-        ["Custom themes"] = "自定义主题",
-        ["Themes"] = "主题",
-        ["Background color"] = "背景颜色",
-        ["Main color"] = "主颜色",
-        ["Accent color"] = "强调色",
-        ["Outline color"] = "轮廓颜色",
-        ["Font color"] = "字体颜色",
-        ["Font Face"] = "字体",
-        ["Code"] = "代码",
-        ["Configuration"] = "配置",
-        ["Config name"] = "配置名称",
-        ["Create config"] = "创建配置",
-        ["Config list"] = "配置列表",
-        ["Custom Title"] = "自定义标题",
-        ["Default value"] = "默认值",
-        ["Custom Title Color"] = "自定义标题颜色",
-        ["Emote Player"] = "表情播放器",
-        ["Select Emote"] = "选择表情",
-        ["Play Emote"] = "播放表情",
-        ["Stop Emote"] = "停止表情",
-        ["Skybox Changer"] = "天空盒更换器",
-        ["Redshift"] = "红移",
-        ["Body Modifier"] = "身体修改器",
-        ["Select Material"] = "选择材质",
-        ["ForceField"] = "力场",
-        ["Material Color"] = "材质颜色",
-        ["Delete Player Tags"] = "删除玩家标签",
-        ["Delete Dinner Suit"] = "删除晚礼服",
-        ["Saturation Density"] = "饱和度密度",
-        ["0%/100%"] = "0%/100%",
-        ["Select Whitelisted Players"] = "选择白名单玩家",
-        ["Shaders/Ambience"] = "着色器/环境",
-        ["Ambience"] = "环境",
-        ["Force Time"] = "强制时间",
-        ["12hr/24hr"] = "12小时制/24小时制",
-        ["Custom Saturation"] = "自定义饱和度",
-        ["Health Text"] = "生命值文本",
-        ["Distance"] = "距离",
-        ["Box"] = "方框",
-        ["Name"] = "名称",
-        ["Tracers"] = "追踪线",
-        ["3D Box"] = "3D方框",
-        ["Whitelist Players"] = "白名单玩家",
-        ["FPS Boost"] = "FPS提升",
-        ["FOV Slider：70"] = "视野滑块：70",
-        ["Remove Fog"] = "移除雾效",
-        ["Instant Interact"] = "即时交互",
-        ["Player Tag"] = "玩家标签",
-        ["Custom Suit Color"] = "自定义套装颜色",
-        ["v2.4 - Made by TexRBLX"] = "v2.4 - 由TexRBLX制作",
-        ["Add New Waypoint"] = "添加新路径点",
-        ["Waypoint Select"] = "路径点选择",
-        ["Teleport to Selected"] = "传送到选定位置",
-        ["Player ESP Options"] = "玩家透视选项",
-        ["Player ESP Toggle"] = "玩家透视开关",
-        ["Health Bar"] = "生命条",
-        ["Get Biggest Threat"] = "获取最大威胁",
-        ["Player Information"] = "玩家信息",
-        ["Select Player"] = "选择玩家",
-        ["ESP Settings"] = "透视设置",
-        ["ESP Method"] = "透视方法",
-        ["Mobile"] = "移动版",
-        ["PEABERT"] = "PEABERT",
-        ["Peabert ESP"] = "Peabert透视",
-        ["Recenter"] = "重新居中",
-        ["Hide Name"] = "隐藏名称",
-        ["Waypoints"] = "路径点",
-        ["Auto Hide And Seek"] = "自动捉迷藏",
-        ["Auto Jump Rope"] = "自动跳绳",
-        ["Auto Glass Bridge"] = "自动玻璃桥",
-        ["[BETA] Auto Mingle"] = "[测试版]自动社交",
-        ["Activation Time (s):"] = "激活时间(秒):",
-        ["[BETA] Auto Last Dinner"] = "[测试版]自动最后的晚餐",
-        ["[BETA] Auto Squid Game"] = "[测试版]自动鱿鱼游戏",
-        ["[BETA] Auto Sky Squid Ga"] = "[测试版]自动天空鱿鱼游戏",
-        ["Auto Skip Dialogue"] = "自动跳过对话",
-        ["Auto Queue"] = "自动排队",
-        ["Auto Vote"] = "自动投票",
-        ["Select Vote"] = "选择投票",
-        ["Continue"] = "继续",
-        ["Tug Of War"] = "拔河",
-        ["Games"] = "游戏",
-        ["Auto Win"] = "自动获胜",
-        ["Auto RLGL"] = "自动红灯绿灯",
-        ["Auto Dalgona"] = "自动糖饼游戏",
-        ["Auto Lights Out"] = "自动熄灯",
-        ["Choose Closest Player"] = "选择最近玩家",
-        ["Teleport Method"] = "传送方法",
-        ["Behind"] = "后方",
-        ["Auto Attack"] = "自动攻击",
-        ["Fly Method"] = "飞行方法",
-        ["Velocity"] = "速度",
-        ["Freeze Self"] = "冻结自己",
-        ["Target Hiders"] = "目标隐藏者",
-        ["Teleport Distance"] = "传送距离",
-        ["2/10"] = "2/10",
-        ["Teleport Interval"] = "传送间隔",
-        ["0/1"] = "0/1",
-        ["Target Player"] = "目标玩家",
-        ["Noclip"] = "穿墙模式",
-        ["Velocity Fly Speed"] = "速度飞行速度",
-        ["100/500"] = "100/500",
-        ["Priority List"] = "优先级列表",
-        ["Extra Prediction"] = "额外预测",
-        ["0.05s/0.2s"] = "0.05秒/0.2秒",
-        ["Enable Offsets"] = "启用偏移",
-        ["Player Attach"] = "玩家附着",
-        ["Attach To Player"] = "附着到玩家",
-        ["Jump Power"] = "跳跃力量",
-        ["Input JP"] = "输入跳跃力量",
-        ["50/500"] = "50/500",
-        ["Prioritized Tools"] = "优先工具",
-        ["Fists, Fork, Bottle, K..."] = "拳头,叉子,瓶子,K...",
-        ["Target Priority"] = "目标优先级",
-        ["Closest"] = "最近",
-        ["Hip Height"] = "臀部高度",
-        ["Input Hip Height"] = "输入臀部高度",
-        ["0/20"] = "0/20",
-        ["Highlight Target"] = "高亮目标",
-        ["Hitbox Trail"] = "命中框轨迹",
-        ["Whitelist"] = "白名单",
-        ["Fling A11"] = "抛掷A11",
-        ["Fling Strength"] = "抛掷强度",
-        ["10000/50000"] = "10000/50000",
-        ["Fling All Whitelist"] = "抛掷所有白名单",
-        ["Enable Kill Aura"] = "启用杀戮光环",
-        ["Automatic"] = "自动",
-        ["Player Mods"] = "玩家修改",
-        ["Speed Boost"] = "速度提升",
-        ["0/30"] = "0/30",
-        ["Input Speed"] = "输入速度",
-        ["Require Right-Click"] = "需要右键点击",
-        ["Ignore Ragdolled"] = "忽略布娃娃状态",
-        ["Range"] = "范围",
-        ["20 studs/500 studs"] = "20单位/500单位",
-        ["Input Range"] = "输入范围",
-        ["Input Safe Part Height"] = "输入安全部件高度",
-        ["Aim Assist"] = "瞄准辅助",
-        ["Teleport Back"] = "传送返回",
-        ["Create New Safe Part"] = "创建新安全部件",
-        ["Fling"] = "抛掷",
-        ["Bypass Anti-Cheat"] = "绕过反作弊",
-        ["FOV Radius"] = "视野半径",
-        ["120/1000"] = "120/1000",
-        ["Activation Distance"] = "激活距离",
-        ["10 studs/500 studs"] = "10单位/500单位",
-        ["Target Part"] = "目标部位",
-        ["Head"] = "头部",
-        ["Smoothness"] = "平滑度",
-        ["0.5/1"] = "0.5/1",
-        ["Safe Part Height"] = "安全部件高度",
-        ["Safe Part Teleport Y"] = "安全部件传送Y坐标",
-        ["Create New Part Each Time"] = "每次创建新部件",
-        ["TP When Health Under"] = "生命值低于时传送",
-        ["Health TP Value"] = "生命值传送值",
-        ["73/100"] = "73/100",
-        ["Input Health TP Value"] = "输入生命值传送值",
-        ["Auto-Dodge"] = "自动闪避",
-        ["Always Run"] = "总是奔跑",
-        ["Face Closest Player X"] = "面向最近玩家X",
-        ["Disable Jump Fatigue"] = "禁用跳跃疲劳",
-        ["Backwards Sprint"] = "向后冲刺",
-        ["Pickup Dropped Bandages"] = "拾取掉落绷带",
-        ["Dash & Abilities"] = "冲刺 & 能力",
-        ["PVP"] = "玩家对战",
-        ["Enable Dash"] = "启用冲刺",
-        ["Enable Phantom Dash Abil"] = "启用幻影冲刺能力",
-        ["Custom Dash Cooldown"] = "自定义冲刺冷却",
-        ["Custom Dash Power"] = "自定义冲刺力量",
-        ["Anti-Stun"] = "防眩晕",
-        ["Anti-Ragdoll"] = "防布娃娃",
-        ["Anti-Injury"] = "防受伤",
-        ["Anti-Fling"] = "防抛掷",
-        ["Enable Parkour Artist"] = "启用跑酷大师",
-        ["Auto Get Food"] = "自动获取食物",
-            ["Bottle"] = "瓶子",
-        ["Auto QTE"] = "自动快速反应事件",
-        ["Method"] = "方法",
-        ["Legit"] = "合法模式",
-        ["Auto Climb"] = "自动攀爬",
-        ["Anti-Fall (Hook + TP)"] = "防坠落(钩子+传送)",
-        ["Anti-Fall (Safety Net)"] = "防坠落(安全网)",
-        ["Safety Net Offset"] = "安全网偏移",
-        ["-5 studs/-5 studs"] = "-5单位/-5单位",
-        ["Bring Guards Loop"] = "带来守卫循环",
-        ["Guard Limit:20"] = "守卫限制:20",
-        ["Guard TP Delay:1"] = "守卫传送延迟:1",
-        ["Gun Mods (Rebel)"] = "枪械修改(反抗者)",
-        ["WARNING:Only use after picking up a gun!"] = "警告:仅在拾取枪后使用!",
-        ["Select Gun"] = "选择枪械",
-        ["Input Activation Distance"] = "输入激活距离",
-        ["Return Delay (sec)：1"] = "返回延迟(秒):1",
-        ["Sky Squid Games"] = "天空鱿鱼游戏",
-        ["Set Guard TP Waypoint"] = "设置守卫传送路径点",
-        ["Auto Power-Hold"] = "自动力量保持",
-        ["TP to Winning Room"] = "传送到获胜房间",
-        ["Glass Highlight"] = "玻璃高亮",
-        ["No Fall (Hook + TP)"] = "防坠落(钩子+传送)",
-        ["No Fall (Troll)"] = "防坠落(troll模式)",
-        ["Power-Hold TP"] = "力量保持传送",
-        ["Teleport Delay:50%"] = "传送延迟:50%",
-        ["Rebel"] = "反抗者",
-        ["Enable Dodge"] = "启用闪避",
-        ["Activation Distance:15"] = "激活距离:15",
-        ["Enable Silent Aim"] = "启用静默瞄准",
-        ["120px/1000px"] = "120像素/1000像素",
-        ["Select Mode"] = "选择模式",
-        ["Auto Balance"] = "自动平衡",
-        ["Delete Rope"] = "删除绳子",
-        ["Teleport To Spikes"] = "传送到尖刺",
-        ["Spike Kill"] = "尖刺击杀",
-        ["Help Random Player"] = "帮助随机玩家",
-        ["Troll Random Player"] = "恶搞随机玩家",
-        ["Auto Kill Players"] = "自动击杀玩家",
-        ["Auto Pull Rope"] = "自动拉绳",
-        ["Rope Pull Interval"] = "拉绳间隔",
-        ["0 seconds/3 seconds"] = "0秒/3秒",
-        ["Seeker ESP"] = "寻找者透视",
-        ["Exit Door ESP"] = "出口门透视",
-        ["Key ESP"] = "钥匙透视",
-        ["Key Select"] = "钥匙选择",
-        ["Circle Key"] = "圆形钥匙",
-        ["Teleport To Key"] = "传送到钥匙",
-        ["Teleport To Exit Door"] = "传送到出口门",
-        ["Remove Spikes"] = "移除尖刺",
-        ["Ink Game - TexRBLX |30 fps |149 ms | build:public build"] = "墨水游戏 - TexRBLX |30 fps |149 ms | 构建:公开构建",
-        ["Lock"] = "锁定",
-        ["Ink Game"] = "墨水游戏",
-        ["Anti Cheat"] = "反作弊",
-        ["Dalgona"] = "糖饼",
-        ["Additional AC Bypass"] = "额外反作弊绕过",
-        ["Crack God-Mode"] = "破解上帝模式",
-        ["Red Light Green Light"] = "红灯绿灯",
-        ["Complete Shape"] = "完成形状",
-        ["Give Lighter"] = "给予打火机",
-        ["God Mode Minus"] = "上帝模式减",
-        ["Teleport Location"] = "传送位置",
-        ["Top Of Tree"] = "树顶",
-        ["Hide and Seek"] = "捉迷藏",
-        ["Hider ESP"] = "隐藏者透视",
-        ["Pickup All Flowers"] = "拾取所有花朵",
-        ["收集 All Gold Stacks"] = "收集所有金币堆",
-        ["自动 Crock Pot"] = "自动炖锅",
-        ["Food Choice"] = "食物选择",
-        ["Bring Food To Cook Pot"] = "带来食物到烹饪锅",
-        ["Build Radius"] = "建造半径",
-        ["Angle Increment"] = "角度增量",
-        ["Plant/Build Limit"] = "种植/建造限制",
-        ["Fartsaken"] = "Fartsaken",
-        ["Autoblock"] = "自动格挡",
-        ["Automatically block incoming attacks"] = "自动格挡incoming attacks",
-        ["Hitbox"] = "命中框",
-        ["Characters"] = "角色",
-        ["Rage"] = "狂暴模式",
-        ["Aiming"] = "瞄准",
-        ["Block Projectiles"] = "格挡投射物",
-        ["Autoblock Characters"] = "自动格挡角色",
-        ["Aimbot"] = "自动瞄准",
-        ["Silent Aim"] = "静默瞄准",
-        ["TwoTime Look Same Direction"] = "TwoTime看同一方向",
-        ["Aimbot Characters"] = "自动瞄准角色",
-        ["TwoTime,Guest1337,Ch..."] = "TwoTime,Guest1337,Ch...",
-        ["Silent Aim Characters"] = "静默瞄准角色",
-        ["c00lkidd, Dusekkar, Noli"] = "c00lkidd, Dusekkar, Noli",
-        ["Silent Aim Prediction Strength"] = "静默瞄准预测强度",
-        ["1/2.5"] = "1/2.5",
-        ["Dusekkar Aim Target"] = "Dusekkar瞄准目标",
-        ["Killer"] = "杀手",
-        ["Dusekkar Wallbang"] = "Dusekkar穿墙",
-        ["Misc Rage Functions"] = "杂项狂暴功能",
-        ["Reach"] = "范围",
-        ["Auto Screen Popups"] = "自动屏幕弹出",
-        ["Anti Reach"] = "反范围",
-        ["Shedletsky Fling Sword"] = "Shedletsky抛掷剑",
-        ["Reach Distance"] = "范围距离",
-        ["50 Studs"] = "50单位",
-        ["Reach Prediction"] = "范围预测",
-        ["1 Seconds"] = "1秒",
-        ["Reach Strength"] = "范围强度",
-        ["1 Multiplier"] = "1倍",
-        ["Reach Delay"] = "范围延迟",
-        ["0.15 Seconds"] = "0.15秒",
-        ["Speed Stamina"] = "速度耐力",
-        ["Note:Stamina changes apply after round ends"] = "注意:耐力变化在回合结束后应用",
-        ["Stamina Gain Speed"] = "耐力获得速度",
-        ["20/100"] = "20/100",
-        ["Actions"] = "动作",
-        ["Abilities"] = "能力",
-        ["Invisibility"] = "隐身",
-        ["Better Noli Controls"] = "更好的Noli控制",
-        ["Auto Generator"] = "自动发电机",
-        ["Auto Solve Generator"] = "自动解决发电机",
-        ["K"] = "K",
-        ["Generator Helper"] = "发电机助手",
-        ["Generators"] = "发电机",
-        ["Waiting to be in generator.."] = "等待进入发电机..",
-        ["Generator Backgrounds"] = "发电机背景",
-        ["Background Video."] = "背景视频",
-        ["Subway Surfers"] = "地铁跑酷",
-        ["Video Volume"] = "视频音量",
-        ["Tracer Start Position"] = "追踪线起始位置",
-        ["Bottom"] = "底部",
-        ["Slasher] Forsaken"] = "杀手] 被遗弃者",
-        ["Outline Transparency"] = "轮廓透明度",
-        ["Chams"] = "透视材质",
-        ["Fill Transparency"] = "填充透明度",
-        ["World"] = "世界",
-        ["Disable Blur"] = "禁用模糊",
-        ["ESP and other visuals."] = "透视和其他视觉效果",
-        ["Items"] = "物品",
-        ["Minions"] = "仆从",
-        ["Projectile"] = "投射物",
-        ["Taph Traps"] = "陷阱",
-        ["Full Bright"] = "全亮",
-        ["Self"] = "自身",
-        ["Princess Mode"] = "公主模式",
-        ["Field of View"] = "视野",
-        ["Bring Gears"] = "带来齿轮",
-        ["Bring Guns & Armor"] = "带来枪械和护甲",
-        ["Guns & Armor"] = "枪械和护甲",
-        ["Laser"] = "激光",
-        ["Bring Others"] = "带来其他物品",
-        ["Others"] = "其他",
-        ["Diamond"] = "钻石",
-        ["Bring Food & Healing"] = "带来食物和治疗物品",
-        ["Food & Healing"] = "食物和治疗",
-        ["Bandage"] = "绷带",
-        ["Entertainment"] = "娱乐",
-        ["Cold"] = "寒冷",
-        ["CO"] = "CO",
-        ["x2"] = "x2",
-        ["Gears"] = "齿轮",
-        ["Bolt, Tyre"] = "螺栓,轮胎",
-        ["Sprint"] = "冲刺",
-        ["Bring GearsBring Height"] = "带来齿轮高度",
-        ["Bring Fuel [BETA]"] = "带来燃料[BETA]",
-        ["Fuel"] = "燃料",
-        ["Bring Logs [BETA]"] = "带来日志[BETA]",
-        ["Bring Food & HealingFaster Bring IBETA]"] = "带来食物和治疗更快带来[BETA]",
-        ["Bring Location"] = "带来位置",
-        ["Max Per Item"] = "每物品最大数量",
-        ["Bring Cooldown"] = "带来冷却",
-        ["No Bring Quantity Limit"] = "无带来数量限制",
-        ["Bring Height"] = "带来高度",
-        ["10"] = "10",
-        ["1"] = "1",
-        ["2Bring Settings"] = "2带来设置",
-        ["Use Freecam for Bring Items"] = "使用自由相机带来物品",
-        ["Faster Bring [BETA]"] = "更快带来[BETA]",
-        ["Brina Cold Teleport to Camp"] = "布琳娜寒冷传送到营地",
-        ["Water"] = "水",
-        ["Teleport to Cultist Generator Base"] = "传送到邪教发电机基地",
-        ["Teleport to Stronghold"] = "传送到要塞",
-        ["Teleport to Stronghold Diamond Chest"] = "传送到要塞钻石宝箱",
-        ["Teleport to Caravan"] = "传送到商队",
-        ["Teleport to FairyChildren"] = "传送到仙子子对象",
-        ["ChildrenEspColor"] = "子对象透视颜色",
-        ["Children Items"] = "子对象物品",
-        ["Gears ESP"] = "齿轮透视",
-        ["GearsEspColor"] = "齿轮透视颜色",
-        ["Lost Children...Gears ESP"] = "丢失子对象...齿轮透视",
-        ["Gears Items"] = "齿轮物品",
-        ["Fuel ESP"] = "燃料透视",
-        ["Bolt, Tyre....FuelEspColor"] = "螺栓,轮胎....燃料透视颜色",
-        ["Fuel Items"] = "燃料物品",
-        ["Food & Healing ESP"] = "食物和治疗透视",
-        ["FoodHealingEspColor"] = "食物和治疗透视颜色",
-        ["Food & Healing Items"] = "食物和治疗物品",
-        ["Corpse"] = "尸体",
-        ["Carrot"] = "胡萝卜",
-        ["Guns & Armor ESP"] = "枪械和护甲透视",
-        ["GunsArmorEspColor"] = "枪械和护甲透视颜色",
-        ["Guns & Armor Items"] = "枪械和护甲物品",
-        ["OthersEspColor"] = "其他透视颜色",
-        ["Others Items"] = "其他物品",
-        ["Character ESP"] = "角色透视",
-        ["Character"] = "角色",
-        ["CharactersEspColor"] = "角色透视颜色",
-        ["Feather"] = "羽毛",
-        ["Character Items"] = "角色物品",
-        ["Enable Highlight"] = "启用高亮",
-        ["Show Distance"] = "显示距离",
-        ["Fill Transparency"] = "填充透明度",
-        ["Frog"] = "青蛙",
-        ["0.75Remove Sky"] = "0.75移除天空",
-        ["Ambient"] = "环境",
-        ["Rich Shader"] = "丰富着色器",
-        ["Shader Color"] = "着色器颜色",
-        ["PerformanceLighting Theme"] = "性能照明主题",
-        ["Enable Lighting Theme"] = "启用照明主题",
-        ["Aesthetic Lighting"] = "美学照明",
-        ["Security"] = "安全",
-        ["TOOLS"] = "工具",
-        ["INF JUMP"] = "无限跳跃",
-        ["DESVNC BODY"] = "身体不同步",
-        ["3RD FLOOR"] = "三楼",
-        ["FLY TO BASE"] = "飞往基地",
-        ["NOCLIP"] = "穿墙",
-        ["GOD MODE"] = "上帝模式",
-        ["Discord Key"] = "Discord 密钥",
-        ["Log"] = "木头",
-        ["Coal"] = "煤炭",
-        ["Fuel Canister"] = "燃料罐",
-        ["Oil Barrel"] = "油桶",
-        ["Biofuel"] = "生物燃料",
-        ["This tab is empty"] = "此选项卡为空",
-        ["Other"] = "其他",
-        ["Towns"] = "城镇",
-        ["OTHER TP"] = "其他传送",
-        ["Transformation"] = "转型",
-        ["Bring Items"] = "带来物品",
-        ["Fly Speed"] = "飞行速度",
-        ["Fly Off"] = "关闭飞行",
-        ["Anti-Void"] = "反虚空",
-        ["Join Discord"] = "加入Discord",
-        ["Check Key"] = "检查密钥",
-        ["Get Key"] = "获取密钥",
-        ["Enter key here..."] = "在此处输入密钥...",
-        ["Verification Required"] = "需要验证",
-        ["Auto Upgrade Campfire"] = "自动升级篝火",
-        ["Esp"] = "透视",
-        ["Combat"] = "战斗",
-        ["Premium Required"] = "需支付保费",
-        ["Locked features can be unlocked by buying premium"] = "锁定的功能可以通过购买高级版来解锁",
-        ["Aura"] = "光环",
-        ["Select Target"] = "选择目标",
-        ["Kill Player"] = "杀死玩家",
-        ["Chop Aura"] = "砍树光环",
-        ["Open Daddy's gui"] = "打开爸爸的 gui",
-        ["Cancel"] = "取消",
-        ["Do you want to close this window? You will not be able to open it again."] = "您要关闭此窗口吗？您将无法再次打开它。",
-        ["Close Window"] = "关闭窗口",
-        ["Target Myself"] = "瞄准自己",
-        ["Kill Aura Radius"] = "击戮光环半径",
-        ["Chop Aura Radius"] = "砍树光环半径",
-        ["God mode activated!"] = "上帝模式已启动！",
-        ["God Mode"] = "上帝模式",
-        ["Auto Feed"] = "自动进食",
-        ["Load Map"] = "加载地图",
-        ["Discover Full Map"] = "发现完整地图",
-        ["Select Food"] = "选择食物",
-        ["Choose the food"] = "选择食物",
-        ["Cooked Steak"] = "熟牛排",
-        ["Cooked Morsel"] = "熟肉块",
-        ["Chili"] = "辣椒",
-        ["Cake"] = "蛋糕",
-        ["Berry"] = "浆果",
-        ["Apple"] = "苹果",
-        ["Steak"] = "牛排",
-        ["Morsel"] = "小肉块",
-        ["Slow"] = "慢的",
-        ["Normal"] = "普通的",
-        ["Fast"] = "快速",
-        ["MainFire"] = "主火",
-        ["CustomText"] = "自定义文本",
-        ["Penis"] = "阴茎",
-        ["Heart"] = "心",
-        ["Triangle"] = "三角形",
-        ["Circle"] = "圆圈",
-        ["Square"] = "正方形",
-        ["Chair"] = "椅子",
-        ["Old Car Engine"] = "旧汽车发动机",
-        ["Washing Machine"] = "洗衣机",
-        ["Old Radio"] = "旧收音机",
-        ["Sheet Metal"] = "金属板",
-        ["Broken Microwave"] = "坏掉的微波炉",
-        ["Broken Fan"] = "坏掉的风扇",
-        ["Tyre"] = "轮胎",
-        ["Bolt"] = "螺栓",
-        ["Activate God Mode"] = "激活上帝模式",
-        ["Feed %"] = "喂养 ％",
-        ["Eat when hunger reaches this %"] = "当饥饿度达到此百分比时进食",
-        ["Choose the items"] = "选择物品",
-        ["Auto Cook Food"] = "自动烹饪食物",
-        ["Auto Scrap"] = "自动废品",
-        ["Choose items to scrap"] = "选择需要的废品",
-        ["Select Scrap Items"] = "选择废品",
-        ["Auto Fish"] = "自动钓鱼",
-        ["Auto Sacrifice"] = "自动牺牲",
-        ["Sacrifice"] = "牺牲",
-        ["Auto Grab Children"] = "自动抓取孩子",
-        ["Child Rescue"] = "孩子救援",
-        ["Thter text here"] = "此处为文本",
-        ["Enter text to plant (for CustomText shape)"] = "输入要种植的文字（用于自定义文本形状）",
-        ["Customn Text"] = "自定义文本",
-        ["Locked"] = "已锁定",
-        ["Shape"] = "形状",
-        ["Planting Origin"] = "种植起点",
-        ["Planting"] = "种植",
-        ["Start Planting"] = "开始种植",
-        ["Y Offset"] = "Y 偏移",
-        ["Spacing"] = "间距",
-        ["Main"] = "主页",
-        ["Size"] = "尺寸",
-        ["Esp Items"] = "透视物品",
-        ["Enable Esp"] = "启用透视",
-        ["Esp Entity"] = "透视实体",
-        ["Bring"] = "带来",
-        ["Players"] = "玩家",
-        ["Anonymous"] = "匿名",
-        ["All"] = "所有",
-        ["Kill Aura Range"] = "杀戮光环范围",
-        ["Hit Box Expander"] = "击中框扩张器",
-        ["Expand Hitbox"] = "展开碰撞箱",
-        ["Hitbox Size"] = "碰撞箱大小",
-        ["Auto Bandage"] = "自动使用绷带",
-        ["Heal When below"] = "血量设置",
-        ["Auto Heal Teamates (Hold Bandage)"] = "自动治疗队伍（持有绷带）",
-        ["Auto Eat"] = "自动吃",
-        ["Auto Eat Mode"] = "自动吃模式",
-        ["Select Foods"] = "选择食物",
-        ["Eat When below"] = "饥饿值设置",
-        ["Auto Fishing"] = "自动钓鱼",
-        ["Auto Cast"] = "自动钓上",
-        ["Auto Minigames"] = "自动迷你游戏",
-        ["Bigger Success Bar"] = "更大的进度条",
-        ["Fishing Settings"] = "钓鱼设置",
-        ["Auto Best Spot"] = "自动更好的地方",
-        ["Tp To Key"] = "传送到钥匙",
-        ["Tp To Best Location"] = "传送到更好的地方",
-        ["TP to Food"] = "传送到食物",
-        ["Eat Near Food"] = "吃附近的食物",
-        ["Corn"] = "玉米",
-        ["Pumpkin"] = "南瓜",
-        ["Stew"] = "炖菜",
-        ["Float"] = "浮动",
-        ["Bring location"] = "带来位置",
-        ["Workbench"] = "工作台",
-        ["Max Per Item"] = "最大每件物品",
-        ["Frog Key"] = "青蛙钥匙",
-        ["UFO Scrap"] = "UFO废料",
-        ["UFO Component"] = "UFO组件",
-        ["UFO Junk"] = "UFO垃圾",
-        ["Cultist Gem"] = "邪教宝石",
-        ["Gem of the Forest"] = "森林宝石",
-        ["Gem of the Forest Fragment"] = "森林片段的宝石",
-        ["Bring Fuel"] = "带来燃料",
-        ["Sapling"] = "树苗",
-        ["Ate Carrot near you."] = "在你附近吃了胡萝卜。",
-        ["Ribs"] = "肋骨",
-        ["Cooked Ribs"] = "烤熟的肋骨",
-        ["Meat? Sandwich"] = "肉？三明治",
-        ["MedKit"] = "医疗包",
-        ["Chilli"] = "辣椒",
-        ["Bring Food & Healing"] = "带来食物和愈合",
-        ["Bring Guns & Armor"] = "带来枪和盔甲",
-        ["Morningstar"] = "晨星",
-        ["Laser Sword"] = "激光剑",
-        ["Raygun"] = "射线枪",
-        ["Chainsaw"] = "电锯",
-        ["Strong Axe"] = "强壮的斧头",
-        ["Spear"] = "矛",
-        ["Good Axe"] = "好斧头",
-        ["Revolver"] = "左轮手枪",
-        ["Rifle"] = "步枪",
-        ["Tactical Shotgun"] = "战术霰弹枪",
-        ["Revolver Ammo"] = "左轮手枪弹药",
-        ["Rifle Ammo"] = "步枪弹药",
-        ["Alien Armour"] = "外星人盔甲",
-        ["Leather Body"] = "皮革盔甲",
-        ["Iron Body"] = "铁盔甲",
-        ["Thorn Body"] = "荆棘盔甲",
-        ["Riot Shield"] = "防暴盾",
-        ["Bring Others"] = "带来其他",
-        ["Sack"] = "袋子",
-        ["Seed Box"] = "种子盒",
-        ["Old Flashlight"] = "老手电筒",
-        ["Strong Flashlight"] = "强手电筒",
-        ["Bunny Foot"] = "兔子脚",
-        ["Wolf Pelt"] = "狼毛皮",
-        ["Bear Pelt"] = "熊毛皮",
-        ["Alpha Wolf Pelt"] = "阿尔法狼毛皮",
-        ["Arctic Fox Pelt"] = "北极狐毛皮",
-        ["Polar Bear Pelt"] = "北极熊毛皮",
-        ["Mammoth Tusk"] = "猛犸象牙",
-        ["Auto Rescue Kids"] = "自动救援小孩",
-        ["Select Child"] = "选择孩子",
-        ["Auto Rescue"] = "自动救援",
-        ["Auto Farm Wood"] = "自动木材农场",
-        ["Auto Farm Wood Type"] = "自动木材农场类型",
-        ["Small Tree"] = "小树",
-        ["Snowy Small Tree"] = "雪的小树",
-        ["Large Tree"] = "大树",
-        ["Number of Trees to Cut"] = "切割的树数",
-        ["Sapling Count"] = "树苗数量",
-        ["Sapling Distance"] = "树苗距离",
-        ["Auto Sapling"] = "自动树苗",
-        ["Show Blueprint"] = "显示蓝图",
-        ["Auto Campfire"] = "自动篝火",
-        ["Select Fuels"] = "选择燃料",
-        ["Auto Fuel Campfire"] = "自动给篝火补充燃料",
-        ["Start Fueling When"] = "开始加油",
-        ["Auto Collect"] = "自动收集",
-        ["AutoCollect Flowers"] = "自动拾取花",
-        ["AutoCollect Coins"] = "自动胶拾取金币",
-        ["Open Seed Pack"] = "打开种子包",
-        ["Teleports"] = "传送点",
-        ["MapLoader"] = "地图加载器",
-        ["Stop Loading"] = "停止加载",
-        ["Tp To Camp"] = "传送到营地",
-        ["Bunny"] = "兔子",
-        ["Alpha Wolf"] = "阿尔法狼",
-        ["Bear"] = "熊",
-        ["Polar Bear"] = "北极熊",
-        ["Arctic Fox"] = "北极狐",
-        ["Mammoth"] = "猛犸象",
-        ["Cultist"] = "邪教徒",
-        ["Crossbow Cultist"] = "弩教徒",
-        ["Alien"] = "外星人",
-        ["Juggernaut Cultist"] = "巨教徒",
-        ["Select Chest"] = "选择箱子",
-        ["None"] = "没有",
-        ["Chest 1 (Volcanic Chest1)"] = "箱子1(火山箱子1)",
-        ["Teleport to Chest"] = "传送到箱子",
-        ["Refresh Chest"] = "刷新箱子",
-        ["Teleport to NPC"] = "传送到NPC",
-        ["Select NPC"] = "选择NPC",
-        ["Fairy"] = "仙女",
-        ["TP to Selected NPC"] = "传送到选择的NPC",
-        ["Caravan"] = "大篷车",
-        ["BirdWatcher"] = "观鸟者",
-        ["Pelt Trader"] = "毛皮商人",
-        ["Teleport to Child"] = "传送到孩子",
-        ["Teleport to Structure"] = "传送到结构",
-        ["Stronghold"] = "要塞",
-        ["AlienMothership"] = "外星母舰",
-        ["Select Structure"] = "选择结构",
-        ["TP to Selected Structure"] = "传送到选择的结构",
-        ["Frog Cave"] = "青蛙洞穴",
-        ["Military Base"] = "军事基地",
-        ["Ice Temple"] = "冰城堡",
-        ["Bell Tower"] = "钟楼",
-        ["Research Facility"] = "研究设施",
-        ["Anvil"] = "铁砧",
-        ["Snow Clothing Shop"] = "雪服装店",
-        ["Child Visuals"] = "孩子视觉效果",
-        ["Enable Child ESP"] = "启用孩子透视",
-        ["Gear and Fuel Visuals"] = "齿轮和燃料视觉效果",
-        ["Select Gears & Fuels"] = "选择齿轮和燃料",
-        ["Enable Gear and Fuel ESP"] = "启用齿轮和燃料透视",
-        ["Weapons and Other Items Visuals"] = "武器和其他物品视觉效果",
-        ["Select Weapons & Other Items"] = "选择武器和其他物品",
-        ["Enable Weapon and Other Items ESP"] = "启用武器和其他物品透视",
-        ["Chest Visuals"] = "箱子视觉效果",
-        ["Enable Chest ESP"] = "启用箱子透视",
-        ["FPS Boost"] = "帧率提升",
-        ["Remove Fog"] = "删除雾",
-        ["Lower Graphics"] = "较低的图形",
-        ["Full Bright"] = "全亮",
-        ["Blackscreen"] = "黑屏",
-        ["Reveal Locations"] = "揭示地点",
-        ["AntiAfk"] = "防挂机",
-        ["Player Name"] = "玩家名称",
-        ["Hide Friends Names"] = "隐藏朋友姓名",
-        ["Enter name"] = "输入名字",
-        ["Movement"] = "运动",
-        ["Player Speed"] = "玩家移动速度",
-        ["Player Jump Power"] = "玩家跳跃力量",
-        ["No Clip"] = "穿墙",
-        ["Idk - Helpfull"] = "不知道-有帮助的",
-        ["Instant Open Chest"] = "即时打开箱子",
-        ["Anti Void"] = "反虚空",
-        ["Feedback"] = "反馈",
-        ["Player Protection"] = "玩家保护",
-        ["Save and load your settings"] = "保存并加载您的设置",
-        ["Config Name"] = "配置名称",
-        ["Save Config"] = "保存配置",
-        ["Select Config"] = "选择配置",
-        ["Load Config"] = "加载配置",
-        ["Refresh Configs"] = "刷新配置",
-        ["not spawned"] = "未生成",
-        ["Loaded"] = "加载",
-        ["No Selected Food Found"] = "没有找到选定的食物",
-        ["New Patch Note!"] = "新补丁注意！",
-        ["Voidware"] = "虚空",
-        ["Voidware Keybind"] = "虚空工具按键设置",
-        ["Keybind to open ui"] = "用于打开界面的按键绑定",
-        ["Join Discord Server"] = "加入discord服务器",
-        ["Update Discord Info"] = "更新discord信息",
-        ["Welcome to Voidware!"] = "欢迎来到虚空！",
-        ["Make sure to join our discord server for updates!"] = "确保加入我们的Discord服务器进行更新！",
-        ["Unload"] = "销毁",
-        ["A new patch note (99 NIGHTS IN THE FOREST UPDATE! ) is available! Open the changelog?"] = "有一个新的补丁说明《森林九十九夜》更新！🦌可供查看！是否打开更新日志？",
-        ["Yes"] = "是",
-        ["Language Choice"] = "语言选择",
-        ["Library Choice"] = "界面样式选择",
-        ["Fun"] = "娱乐",
-        ["Reveal Map"] = "揭示地图",
-        ["Teleport All Trees"] = "传送所有树木",
-        ["Teleport All BIG Trees"] = "传送所有大树",
-        ["Teleport All Chests"] = "传送所有箱子",
-        ["Teleport All Children [BETA]"] = "传送所有孩子[测试版]",
-        ["Go In Game for Voidware to load:D [You are in lobby currently]"] = "在游戏中获取虚空加载:D[您当前位于大厅]",
-        ["Information"] = "资讯",
-        ["Freeze the movement of something :3"] = "冻结某物的运动:3",
-        ["Scorpion"] = "蝎子",
-        ["Freeze The Thingys"] = "冻结那些东西",
-        ["UnFreeze The Thingys"] = "解冻那些东西",
-        ["Plant Stuff"] = "植物的东西",
-        ["Angle Increment"] = "角度增量",
-        ["Theme"] = "主题",
-        ["Update Theme"] = "更新主题",
-        ["Loads elements from config"] = "加载配置文件",
-        ["Saves elements to config"] = "保存配置",
-        ["Placeholder Text Color"] = "占位文本颜色",
-        ["Text Color"] = "文字颜色",
-        ["Outline Color"] = "轮廓颜色",
-        ["Background Color"] = "背景颜色",
-        ["Toggle Window Transparency"] = "切换窗口透明度",
-        ["Coordinates"] = "坐标",
-        ["Show Coordinates"] = "显示坐标",
-        ["Credits"] = "制作人员名单",
-        ["FOV"] = "视野范围",
-        ["Children ESP"] = "孩子们透视",
-        ["Children"] = "孩子们",
-        ["ChildrenEspColor"] = "孩子们透视颜色",
-        ["Children Items"] = "孩子们物品",
-        ["FoodHealingEspColor"] = "食物和愈合透视颜色",
-        ["GunsArmorEspColor"] = "枪和盔甲透视颜色",
-        ["Characters ESP"] = "角色透视",
-        ["CharactersEspColor"] = "角色透视颜色",
-        ["Characters Items"] = "角色物品",
-        ["Local Player"] = "本地玩家",
-        ["Walk Speed"] = "步行速度",
-        ["Stop"] = "停止",
-        ["Hip Height Changer"] = "髋部高度调整器",
-        ["Entity Godmode"] = "实体无敌模式",
-        ["Ice Aura"] = "自动破冰",
-        ["Ice Aura Range"] = "自动破冰范围",
-        ["Tree Farm"] = "树木农场",
-        ["Chop Status Visualiser"] = "切换状态可视化",
-        ["Heal When Below"] = "血量低于时自动治疗",
-        ["Hitbox Expansion"] = "碰撞箱扩展",
-        ["Hitbox Size Multiplier"] = "碰撞箱大小乘度",
-        ["Instant Catch Fish"] = "即时捕鱼",
-        ["TP to Camp"] = "传送到营地",
-        ["Key"] = "卡密",
-        ["Native"] = "红叶",
-        ["Dead Rails"] = "死铁轨",
-        ["Silent Execution"] = "沉默的执行",
-        ["Days"] = "天",
-        ["Auto Bonds"] = "自动债券",
-        ["FrogBlue"] = "蓝青蛙",
-        ["FrogPurple"] = "紫青蛙",
-        ["Collect All Gold Stacks"] = "收集所有金币堆",
-        ["Auto Crock Pot"] = "自动炖锅",
-        ["Bring Food To Cook Pot"] = "带上食物煮锅",
-        ["Fuel Type"] = "燃料类型",
-        ["Auto Fill Campfire"] = "自动填充篝火",
-        ["Start Fueling when (Fire HP)"] = "当(火焰生命值)时开始添柴/加燃料",
-        ["Auto Pickup Flowers"] = "自动拾取花",
-        ["Auto Collect Coin Stacks"] = "自动收集硬币堆",
-        ["Auto Open Seed Boxes"] = "自动打开种子盒",
-        ["Auto Chest [BETA]"] = "自动开箱[测试版]",
-        ["Plant Saplings in Circle"] = "种植树苗圈",
-        ["Build Log Walls in Circle"] = "在圈子中构建木头墙",
-        ["Bring Settings"] = "带来设置",
-        ["Use Freecam for Bring Items"] = "使用自由视角来带来物品",
-        ["Faster Bring [BETA]"] = "更快的带来[测试版]",
-        ["No Bring Amount Limit"] = "无带来数量限制",
-        ["Bring Fuel [BETA]"] = "带来燃料[测试版]",
-        ["Bring Logs [BETA]"] = "带来木头[测试版]",
-        ["Auto Chop Tree Type"] = "自动砍树类型",
-        ["Auto Chop Trees"] = "自动砍树",
-        ["Auto Chop Trees Range"] = "自动砍树范围",
-        ["Auto Plant Saplings"] = "自动种植树苗",
-        ["Auto Eat Food"] = "自动进食",
-        ["Eat When Hunger Below"] = "饥饿值低于(某数值)时进食",
-        ["MedKit included"] = "包含医疗包",
-        ["Instant Open Chests"] = "即时开箱",
-        ["Auto TP to Camp at Night"] = "夜晚自动传送到营地",
-        ["Teleport to Fishing Hut"] = "传送至渔人小屋",
-        ["100% Fishing Success Rate"] = "100%钓鱼成功率",
-        ["Auto TP to Warm Place"] = "自动传送到温暖的地方",
-        ["Chest TP [BETAJ]"] = "箱子传送[测试版]",
-        ["Chest Dropdown"] = "箱子下拉菜单",
-        ["Refresh Chest List"] = "刷新箱子列表",
-        ["Child TP"] = "孩子传送",
-        ["Lost Child"] = "失踪的孩子",
-        ["Structure TP"] = "结构传送",
-        ["Teleport To Selected Structure"] = "传送至选定结构",
-        ["Teleport to Cultist Generator Base"] = "传送到邪教徒基地",
-        ["PlayerEspColor"] = "玩家透视颜色",
-        ["Main ESP"] = "主要透视",
-        ["Fishing ESP"] = "钓鱼透视",
-        ["FishingEspColor"] = "钓鱼透视颜色",
-        ["Fishing Items"] = "钓鱼物品",
-        ["Water Hole"] = "水坑",
-        ["Water Hole Big"] = "大水坑",
-        ["Water Hole1"] = "水坑1",
-        ["Gears ESP"] = "齿轮透视",
-        ["GearsEspColor"] = "齿轮透视颜色",
-        ["Fuel ESP"] = "燃料透视",
-        ["FuelEspColor"] = "燃料透视颜色",
-        ["Food & Healing ESP"] = "食物和治疗透视",
-        ["Guns & Armor ESP"] = "枪和盔甲透视",
-        ["Others ESP"] = "其他透视",
-        ["Outline Transparency"] = "轮廓透明度",
-        ["Text Size"] = "文字大小",
-        ["TP Walk Speed"] = "传送行走速度",
-        ["TP Walk"] = "传送行走",
-        ["Useful Stuff"] = "有用的东西",
-        ["Remove Sky"] = "移除天空",
-        ["Rich Shader"] = "丰富的着色器",
-        ["Shader Color"] = "着色器颜色",
-        ["Lighting Theme"] = "灯光主题",
-        ["Purple"] = "紫色",
-        ["Galaxy"] = "星系",
-        ["BetterNight"] = "更好的夜晚",
-        ["BetterNight2"] = "更好的夜晚2",
-        ["MagentaOrange"] = "洋红橙色",
-        ["Purple2"] = "紫色2",
-        ["Galaxy2"] = "星系2",
-        ["Pink"] = "粉色",
-        ["Purple3"] = "紫色3",
-        ["DarkishPink"] = "暗粉色",
-        ["Space"] = "空间",
-        ["Galaxy3"] = "星系3",
-        ["NetherWorld"] = "冥界",
-        ["Nebula"] = "星云",
-        ["PurpleNight"] = "紫夜",
-        ["Aesthetic"] = "审美的",
-        ["Aesthetic2"] = "审美的2",
-        ["Pastel"] = "粉彩",
-        ["PurpleClouds"] = "紫云",
-        ["BetterSky"] = "更佳天空",
-        ["DarkMountains"] = "黑暗山脉",
-        ["FlamingSunset"] = "火红的日落",
-        ["NewYork"] = "纽约",
-        ["Aesthetic3"] = "美学3",
-        ["FakeClouds"] = "假云",
-        ["LunarNight"] = "月夜",
-        ["PitchDark"] = "漆黑一片",
-        ["Anti AFK"] = "反挂机",
-        ["Performance"] = "表现",
-        ["Low GFX"] = "低画质",
-        ["Reset Camera"] = "重置相机",
-        ["Might Break your camera!"] = "可能会损坏你的相机!",
-        ["Theme Name"] = "主题名称",
-        ["Teleport To Child"] = "传送孩子",
-        ["Refresh Children List"] = "刷新孩子列表",
-        ["Chest TP [BETA]"] = "宝箱传送[测试版]",
-        ["Ice Axe"] = "冰斧",
-        ["Ice Sword"] = "冰剑",
-        ["server for updates!"] = "服务器更新！",
-        ["Hitboxes restored to original size"] = "命中框恢复至原始大小",
-        ["teleport to camp"] = "传送至营地",
-        ["Hitboxes expanded by"] = "命中框扩大",
-        ["Successfully revealed all places on the map"] = "成功显示地图上的所有地点✔",
-        ["Please equip your sack before using this!"] = "使用前请先装备好你的袋子！",
-        ["Please equip your sack before looting chests"] = "请在抢劫箱子之前装备好你的袋子",
-        ["Process stopped by Stop button!"] = "进程被"停止"按钮停止！",
-        ["Placing 0 blueprints..."] = "放置 0 张蓝图...",
-        ["No saplings found to plant!"] = "沒有找到可以栽植的樹苗！",
-        ["No Low Wall Blueprints available!"] = "没有可用的木头墙蓝图！",
-        ["Warning this might result into lag spikes/fps drops!"] = "警告这可能会导致延迟峰值/帧数下降！",
-        ["Freecam disabled"] = "自由视角已禁用",
-        ["Selected config"] = "选择的配置",
-        ["Failed to reveal map. place a map board in your camp."] = "未能显示地图。请将地图板放置在你的营地中。",
-        ["Config set to: Default"] = "配置设置为：默认",
-        ["Loaded config:"] = "已加载配置:",
-        ["Equip an axe to farm wood."] = "装备一把斧头来砍伐木材。",
-        ["Hunger is 190. Resuming agian Later."] = "饥饿值为 190。稍后再恢复。",
-        ["Loaded config: 1"] = "已加载配置:1",
-        ["Survive 99 Nights"] = "生存99夜",
-        ["Timer"] = "计时器",
-        ["Changed name to"] = "更名为",
-        ["Freemium"] = "免费增值",
-        ["Anti AFK Enabled"] = "反挂机功能已启用",
-        ["No more items to fuel."] = "没有更多物品需要加油。",
-        ["Starting to fuel campfire..."] = "开始为篝火添燃料…",
-        ["Loot Mode"] = "掠夺模式",
-        ["Simple"] = "简单的",
-        ["Loot Radius"] = "战利品范围",
-        ["Chest Delay (sec)"] = "箱子延迟（秒）",
-        ["Bring Method"] = "带来方法",
-        ["Ultra Fast"] = "超快",
-        ["Sacrifice Totem"] = "牺牲图腾",
-        ["Volcano"] = "火山",
-        ["Testing Facility"] = "测试设施",
-        ["Member Count"] = "会员数量",
-        ["Online Count"] = "在线人数",
-        ["Hellephant"] = "地狱火",
-        ["Naill"] = "奈尔",
-        ["No items found to bring! Try exploring the map and try again :D"] = "找不到要携带的物品！请尝试探索地图，然后再试一次 :D",
-        ["Ram"] = "山羊",
-        ["Lavender"] = "薰衣草",
-        ["Freecam enabled for item bringing"] = "启用自由视角，可携带物品",
-        ["not spawned on the map :c"] = "未在地图上生成 :c",
-        ["Caravan not spawned on the map :c"] = "地图上没有出现商队 :c",
-        ["Bring Cultists"] = "带来邪教徒",
-        ["Cultist Choice"] = "邪教徒选择",
-        ["Bringing 2 items to Player!"] = "为玩家带来 2 件物品！",
-        ["Speed Disabled"] = "速度已禁用",
-        ["TP Walk Disabled"] = "传送行走已禁用",
-        ["Official"] = "官方",
-        ["50k"] = "5万",
-        ["Its recommended for the hip height to be at least 25"] = "建议臀高至少为 25",
-        ["Kill Aura Disabled"] = "杀戮光环已禁用",
-        ["Kill Aura Enabled! Make sure to equip a tool"] = "杀戮光环已启用！请务必装备工具",
-        ["Hitboxes expanded by 5x"] = "命中框扩大 5 倍",
-        ["Tree Farm Disabled"] = "树木农场已禁用",
-        ["Tree Farm Enabled! Make sure to equip a tool"] = "树木农场已启用！请务必装备工具",
-        ["Auto teleport to camp!"] = "自动传送到营地！",
-        ["FrogKing"] = "蛙王",
-        ["Cultist King"] = "邪教徒之王",
-        ["Rose"] = "玫瑰",
-        ["Peach"] = "桃",
-        ["Citrus"] = "柑橘",
-        ["Sunset"] = "日落",
-        ["Coral"] = "珊瑚",
-        ["Aurora"] = "极光",
-        ["Aqua"] = "水",
-        ["Midnight"] = "午夜",
-        ["CottonCandy"] = "棉花糖",
-        ["Dark"] = "黑暗的",
-        ["Enter text here"] = "在此处输入文本",
-        ["MadKit"] = "医疗包",
-        ["Leather Armor"] = "皮革盔甲",
-        ["Bring Other Items"] = "带来其他物品",
-        ["Refresh Other Items"] = "刷新其他项目",
-        ["Choose items to bring"] = "选择要携带的物品",
-        ["Select Other Items"] = "选择其他物品",
-        ["Bring Scrap Items"] = "带来废品物品",
-        ["Scrap"] = "废品",
-        ["Bring Equipment Items"] = "带来装备物品",
-        ["Select Equipment Items"] = "选择装备物品",
-        ["Good Sack"] = "好袋子",
-        ["Giant Sack"] = "巨袋",
-        ["Bring Medical Items"] = "带来医疗用品",
-        ["Select Medical Items"] = "选择医疗用品",
-        ["Medicine"] = "药品",
-        ["Bring Food Items"] = "携带食物",
-        ["Food"] = "食物",
-        ["Select Food Items"] = "选择食物",
-        ["Bring Fuel Items"] = "携带燃料物品",
-        ["Select Fuel Items"] = "选择燃料项目",
-        ["Junk"] = "垃圾",
-        ["Bring Junk Items"] = "带来垃圾物品",
-        ["Select Junk Items"] = "选择垃圾物品",
-        ["Refresh List"] = "刷新列表",
-        ["Teleport to Campfire"] = "传送至篝火",
-        ["Enable Fly"] = "启用飞行",
-        ["Enable Speed"] = "启用速度",
-        ["Inf Jump"] = "步兵跳跃",
-        ["Visual"] = "视觉",
-        ["Unload Characters"] = "卸载角色",
-        ["Unload 3D Objects"] = "卸载 3D 对象",
-        ["Low Graphics"] = "低画质",
-        ["Info"] = "信息",
-        ["Script Information"] = "脚本信息",
-        ["Discord Server"] = "Discord 服务器",
-        ["Copy Discord Link"] = "复制 Discord 链接",
-        ["Discord Link Copied"] = "Discord链接已复制",
-        ["Join our Discord: discord.gg/cpshub"] = "加入我们的Discord:discord.gg/cpshub",
-        ["Stun System"] = "眩晕系统",
-        ["Auto Stun Ram"] = "自动眩晕山羊",
-        ["Auto Stun Deer"] = "自动击晕鹿",
-        ["No chests found"] = "未找到宝箱"
+    }
 }
 
+-- 翻译缓存
+local translationCache = {}
 local originalTexts = {}
 local isTranslating = false
 local mainUI = nil
@@ -1597,6 +351,150 @@ local function safeCall(func, errorMessage)
     return result
 end
 
+-- 优化的翻译函数（使用缓存和分批加载）
+local function translateText(text)
+    if type(text) ~= "string" or text == "" then
+        return text
+    end
+    
+    -- 检查缓存
+    if translationCache[text] then
+        return translationCache[text]
+    end
+    
+    local translated = text
+    
+    -- 按顺序在词典部分中查找翻译
+    for _, dictPart in pairs(translationDictParts) do
+        for eng, chn in pairs(dictPart) do
+            translated = string.gsub(translated, eng, chn)
+        end
+    end
+    
+    -- 缓存结果
+    translationCache[text] = translated
+    return translated
+end
+
+-- 存储原始文本
+local function storeOriginalText(object, property, value)
+    if not originalTexts[object] then
+        originalTexts[object] = {}
+    end
+    originalTexts[object][property] = value
+end
+
+-- 处理单个GUI对象
+local function processGUIObject(obj)
+    safeCall(function()
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            -- 只处理可见的对象
+            if obj:IsA("GuiObject") and not obj.Visible then
+                return
+            end
+            
+            local text = obj.Text
+            if text and text ~= "" then
+                local translated = translateText(text)
+                if translated ~= text then
+                    storeOriginalText(obj, "Text", text)
+                    obj.Text = translated
+                end
+            end
+        end
+    end, "处理GUI对象失败: " .. tostring(obj))
+end
+
+-- 只处理可见的GUI元素
+local function processVisibleGUIObjects(parent)
+    safeCall(function()
+        local visibleElements = {}
+        
+        -- 收集可见元素
+        local function collectVisibleElements(gui)
+            if gui:IsA("GuiObject") then
+                if gui.Visible then
+                    if gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox") then
+                        if gui.Text and gui.Text ~= "" then
+                            table.insert(visibleElements, gui)
+                        end
+                    end
+                end
+            end
+            
+            for _, child in ipairs(gui:GetChildren()) do
+                collectVisibleElements(child)
+            end
+        end
+        
+        collectVisibleElements(parent)
+        
+        -- 处理可见元素
+        for _, element in ipairs(visibleElements) do
+            processGUIObject(element)
+        end
+        
+        print("[汉化工具] 处理了 " .. #visibleElements .. " 个可见元素")
+    end, "处理可见GUI对象失败")
+end
+
+-- 恢复原始文本
+local function restoreOriginalTexts()
+    safeCall(function()
+        -- 确保连接被断开
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        
+        -- 恢复文本
+        for obj, properties in pairs(originalTexts) do
+            if obj and obj.Parent then
+                for property, value in pairs(properties) do
+                    pcall(function()
+                        obj[property] = value
+                    end)
+                end
+            end
+        end
+        
+        -- 清空缓存
+        originalTexts = {}
+        translationCache = {}
+        
+        print("[汉化工具] 已恢复所有文本，连接状态:", connection == nil and "已断开" or "仍连接")
+    end, "恢复原始文本失败")
+end
+
+-- 开始翻译（按需翻译）
+local function startTranslation()
+    safeCall(function()
+        -- 确保之前的连接被断开
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        
+        -- 清空之前的记录
+        originalTexts = {}
+        translationCache = {}
+        
+        -- 只翻译当前可见的UI元素
+        processVisibleGUIObjects(playerGui)
+        
+        -- 监听新添加的可见对象
+        connection = playerGui.DescendantAdded:Connect(function(descendant)
+            if isTranslating then
+                -- 延迟处理，确保对象已完全加载
+                wait(0.1)
+                processGUIObject(descendant)
+            end
+        end)
+        
+        print("[汉化工具] 翻译已启动，连接状态:", connection ~= nil)
+    end, "启动翻译失败")
+end
+
 -- 创建极简UI
 local function createSimpleUI()
     return safeCall(function()
@@ -1606,7 +504,7 @@ local function createSimpleUI()
         screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 180, 0, 100)
+        mainFrame.Size = UDim2.new(0, 200, 0, 120)
         mainFrame.Position = UDim2.new(0, 10, 0, 10)
         mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         mainFrame.BorderSizePixel = 0
@@ -1620,7 +518,7 @@ local function createSimpleUI()
         title.Size = UDim2.new(1, 0, 0, 25)
         title.Position = UDim2.new(0, 0, 0, 0)
         title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        title.Text = "汉化工具"
+        title.Text = "汉化工具 v2.0"
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
         title.TextScaled = true
         title.Font = Enum.Font.Gotham
@@ -1632,7 +530,7 @@ local function createSimpleUI()
         
         local toggleButton = Instance.new("TextButton")
         toggleButton.Size = UDim2.new(0.8, 0, 0, 35)
-        toggleButton.Position = UDim2.new(0.1, 0, 0.3, 0)
+        toggleButton.Position = UDim2.new(0.1, 0, 0.25, 0)
         toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
         toggleButton.Text = "开启汉化"
         toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1646,13 +544,24 @@ local function createSimpleUI()
         
         local statusLabel = Instance.new("TextLabel")
         statusLabel.Size = UDim2.new(0.8, 0, 0, 25)
-        statusLabel.Position = UDim2.new(0.1, 0, 0.7, 0)
+        statusLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
         statusLabel.BackgroundTransparency = 1
         statusLabel.Text = "状态: 等待"
         statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         statusLabel.TextScaled = true
         statusLabel.Font = Enum.Font.Gotham
         statusLabel.Parent = mainFrame
+        
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Size = UDim2.new(0.8, 0, 0, 20)
+        infoLabel.Position = UDim2.new(0.1, 0, 0.85, 0)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.Text = "按需翻译模式"
+        infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        infoLabel.TextScaled = true
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.TextSize = 12
+        infoLabel.Parent = mainFrame
         
         -- 按钮事件
         toggleButton.MouseButton1Click:Connect(function()
@@ -1666,10 +575,12 @@ local function createSimpleUI()
             
             if isTranslating then
                 toggleButton.Text = "关闭汉化"
+                toggleButton.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
                 statusLabel.Text = "状态: 汉化中"
                 startTranslation()
             else
                 toggleButton.Text = "开启汉化"
+                toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
                 statusLabel.Text = "状态: 已关闭"
                 restoreOriginalTexts()
             end
@@ -1685,107 +596,6 @@ local function createSimpleUI()
     end, "创建UI失败")
 end
 
--- 优化的翻译函数
-local function translateText(text)
-    if type(text) ~= "string" or text == "" then
-        return text
-    end
-    
-    local translated = text
-    -- 限制循环次数，避免性能问题
-    local count = 0
-    for eng, chn in pairs(translationDict) do
-        if count > 500 then break end -- 安全限制
-        translated = string.gsub(translated, eng, chn)
-        count = count + 1
-    end
-    
-    return translated
-end
-
--- 存储原始文本
-local function storeOriginalText(object, property, value)
-    if not originalTexts[object] then
-        originalTexts[object] = {}
-    end
-    originalTexts[object][property] = value
-end
-
--- 处理GUI对象
-local function processGUIObject(obj)
-    safeCall(function()
-        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-            local text = obj.Text
-            if text and text ~= "" then
-                local translated = translateText(text)
-                if translated ~= text then
-                    storeOriginalText(obj, "Text", text)
-                    obj.Text = translated
-                end
-            end
-        end
-    end, "处理GUI对象失败: " .. tostring(obj))
-end
-
--- 递归处理GUI
-local function processAllGUIObjects(parent)
-    safeCall(function()
-        for _, child in ipairs(parent:GetChildren()) do
-            processGUIObject(child)
-            processAllGUIObjects(child)
-        end
-    end, "递归处理GUI失败")
-end
-
--- 恢复原始文本
-local function restoreOriginalTexts()
-    safeCall(function()
-        -- 确保连接被断开
-        if connection then
-            connection:Disconnect()
-            connection = nil
-        end
-        
-        for obj, properties in pairs(originalTexts) do
-            if obj and obj.Parent then
-                for property, value in pairs(properties) do
-                    pcall(function()
-                        obj[property] = value
-                    end)
-                end
-            end
-        end
-        originalTexts = {}
-        
-        print("[汉化工具] 已恢复所有文本，连接状态:", connection == nil and "已断开" or "仍连接")
-    end, "恢复原始文本失败")
-end
-
--- 开始翻译
-local function startTranslation()
-    safeCall(function()
-        -- 确保之前的连接被断开
-        if connection then
-            connection:Disconnect()
-            connection = nil
-        end
-        
-        -- 清空之前的记录
-        originalTexts = {}
-        
-        processAllGUIObjects(playerGui)
-        
-        -- 监听新对象
-        connection = playerGui.DescendantAdded:Connect(function(descendant)
-            if isTranslating then
-                processGUIObject(descendant)
-            end
-        end)
-        
-        print("[汉化工具] 翻译已启动，连接状态:", connection ~= nil)
-    end, "启动翻译失败")
-end
-
 -- 初始化
 local function initialize()
     safeCall(function()
@@ -1797,10 +607,14 @@ local function initialize()
         
         if mainUI then
             print("[汉化工具] 加载成功！")
-            -- 正确计算词典条目数
-            local count = 0
-            for _ in pairs(translationDict) do count = count + 1 end
-            print("[汉化工具] 词典条目数:", count)
+            -- 计算词典条目数
+            local totalEntries = 0
+            for _, dictPart in pairs(translationDictParts) do
+                for _ in pairs(dictPart) do
+                    totalEntries = totalEntries + 1
+                end
+            end
+            print("[汉化工具] 词典分成 " .. #translationDictParts .. " 部分，共 " .. totalEntries .. " 个条目")
         else
             warn("[汉化工具] UI创建失败")
         end
@@ -1808,7 +622,6 @@ local function initialize()
 end
 
 -- 分步延迟启动
-wait(1) -- 等待1秒让游戏稳定
-print("[汉化工具] 开始初始化...")
-wait(1) -- 再等待1秒
+wait(2) -- 等待2秒让游戏稳定
+print("[汉化工具] 开始初始化优化版汉化工具...")
 initialize()
