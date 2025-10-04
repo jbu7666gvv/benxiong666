@@ -11,225 +11,143 @@ local loadstring = loadstring or load
 
 print("脚本开始执行...")
 
--- 简化的 HTTP 获取函数（移除复杂逻辑）
+-- 改进的 HTTP 获取函数
 local function httpGet(url)
     print("尝试HTTP请求: " .. url)
     local success, result = pcall(function()
+        -- 方法1: 标准HttpGet
         if game and game.HttpGet then
-            return game:HttpGet(url)
+            print("使用 game:HttpGet")
+            return game:HttpGet(url, true)
+        -- 方法2: Synapse
         elseif syn and syn.request then
-            local response = syn.request({Url = url, Method = "GET"})
+            print("使用 syn.request")
+            local response = syn.request({
+                Url = url,
+                Method = "GET",
+                Timeout = 10
+            })
             return response.Body
+        -- 方法3: KRNL/其他执行器
         elseif request then
-            local response = request({Url = url, Method = "GET"})
+            print("使用 request")
+            local response = request({
+                Url = url,
+                Method = "GET"
+            })
+            return response.Body
+        -- 方法4: Fluxus
+        elseif fluxus and fluxus.request then
+            print("使用 fluxus.request")
+            local response = fluxus.request({
+                Url = url,
+                Method = "GET"
+            })
             return response.Body
         else
+            print("没有可用的 HTTP 方法")
             error("没有可用的 HTTP 方法")
         end
     end)
     
-    if success and result then
+    if success and result and #result > 100 then
         print("HTTP请求成功，长度: " .. #result)
         return result
     else
-        print("HTTP请求失败")
+        print("HTTP请求失败: " .. tostring(result))
         return nil
     end
 end
 
--- 极度简化的备用UI
-local function loadFallbackUI()
-    print("创建极度简化UI")
-    
-    local FallbackUI = {}
-    
-    function FallbackUI:Notify(options)
-        print("UI通知: " .. (options.Title or "") .. " - " .. (options.Content or ""))
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = options.Title or "通知",
-                Text = options.Content or "",
-                Duration = options.Duration or 5
-            })
-        end)
-    end
-    
-    function FallbackUI:Popup(options)
-        print("弹窗: " .. (options.Title or ""))
-        -- 立即执行确认回调，不等待
-        if options.Buttons then
-            for _, btn in ipairs(options.Buttons) do
-                if btn.Title == "使用" or btn.Title == "确认" then
-                    if btn.Callback then
-                        btn.Callback()
-                    end
-                    break
-                end
-            end
-        end
-    end
-    
-    function FallbackUI:CreateWindow(options)
-        print("创建窗口: " .. (options.Title or ""))
-        
-        -- 创建实际的GUI
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "BenXiongHanHua_Main"
-        screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-        
-        local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 600, 0, 500)
-        mainFrame.Position = UDim2.new(0.5, -300, 0.5, -250)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        mainFrame.BorderSizePixel = 0
-        mainFrame.Parent = screenGui
-        
-        local titleBar = Instance.new("Frame")
-        titleBar.Size = UDim2.new(1, 0, 0, 40)
-        titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        titleBar.BorderSizePixel = 0
-        titleBar.Parent = mainFrame
-        
-        local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, 0, 1, 0)
-        title.Text = options.Title or "本熊汉化"
-        title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        title.BackgroundTransparency = 1
-        title.TextSize = 18
-        title.Font = Enum.Font.GothamBold
-        title.Parent = titleBar
-        
-        local window = {
-            _gui = screenGui,
-            Title = options.Title or "窗口"
-        }
-        
-        function window:Tab(tabOptions)
-            print("创建标签页: " .. (tabOptions.Title or ""))
-            local tab = {
-                Title = tabOptions.Title or "标签页"
-            }
-            
-            function tab:Section(sectionOptions)
-                print("创建分区: " .. (sectionOptions.Title or ""))
-                local section = {
-                    Title = sectionOptions.Title or "分区"
-                }
-                return section
-            end
-            
-            function tab:Button(buttonOptions)
-                print("创建按钮: " .. (buttonOptions.Title or ""))
-                if buttonOptions.Callback then
-                    buttonOptions.Callback()
-                end
-                return function() end
-            end
-            
-            function tab:Paragraph(paragraphOptions)
-                print("创建段落: " .. (paragraphOptions.Title or ""))
-                return function() end
-            end
-            
-            return tab
-        end
-        
-        function window:SelectTab(index)
-            print("选择标签页: " .. index)
-        end
-        
-        function window:CreateTopbarButton(title, icon, callback, order)
-            print("创建顶部按钮: " .. title)
-            if callback then callback() end
-            return function() end
-        end
-        
-        function window:EditOpenButton(options)
-            print("编辑打开按钮")
-        end
-        
-        function window:ToggleFullscreen()
-            print("切换全屏")
-        end
-        
-        function window:Destroy()
-            if self._gui then
-                self._gui:Destroy()
-            end
-        end
-        
-        return window
-    end
-    
-    -- 直接方法
-    function FallbackUI:Tab(options)
-        return self:CreateWindow({Title = "本熊汉化"}):Tab(options)
-    end
-    
-    function FallbackUI:Section(options)
-        return {Title = options.Title or "分区"}
-    end
-    
-    function FallbackUI:Button(options)
-        if options and options.Callback then
-            options.Callback()
-        end
-        return function() end
-    end
-    
-    function FallbackUI:Paragraph(options)
-        print("段落: " .. (options.Title or ""))
-        return function() end
-    end
-    
-    return FallbackUI
-end
-
--- 极度简化的 WindUI 加载
+-- 简化的 WindUI 加载函数
 local function loadWindUISafely()
-    print("尝试加载 WindUI...")
+    print("开始加载 WindUI...")
     
-    -- 直接使用备用UI，跳过网络请求
-    print("跳过网络加载，直接使用备用UI")
-    return loadFallbackUI()
+    -- 使用更可靠的源
+    local sources = {
+        "https://raw.githubusercontent.com/Footagesus/WindUI/main/src/main.lua",
+        "https://cdn.jsdelivr.net/gh/Footagesus/WindUI@main/src/main.lua",
+    }
+    
+    for i, url in ipairs(sources) do
+        print("尝试源 " .. i .. ": " .. url)
+        local source = httpGet(url)
+        if source then
+            print("成功获取源 " .. i .. ", 长度: " .. #source)
+            local success, lib = pcall(loadstring, source)
+            if success and lib then
+                print("WindUI 加载成功")
+                local ui = lib()
+                if ui and ui.CreateWindow then
+                    print("WindUI 功能正常")
+                    return ui
+                else
+                    print("WindUI 功能不完整")
+                end
+            else
+                print("WindUI 编译失败: " .. tostring(lib))
+            end
+        else
+            print("源 " .. i .. " 请求失败")
+        end
+        task_wait(1)
+    end
+    
+    print("所有WindUI源都失败")
+    return nil
 end
 
--- 直接加载备用UI（跳过所有复杂逻辑）
-print("=== 快速启动 ===")
-local WindUI = loadFallbackUI()
+-- 加载 WindUI 库
+print("=== 开始加载UI库 ===")
+local WindUISuccess, WindUI = pcall(loadWindUISafely)
 
--- 立即显示启动通知
-WindUI:Notify({
-    Title = "本熊汉化", 
-    Content = "快速启动模式 - 界面加载中...",
-    Duration = 3
-})
+if not WindUISuccess or not WindUI then
+    print("WindUI加载失败")
+    -- 直接使用游戏内置通知
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "本熊汉化",
+        Text = "WindUI加载失败，请检查网络",
+        Duration = 5
+    })
+    return
+else
+    print("WindUI加载成功")
+    WindUI:Notify({
+        Title = "本熊汉化",
+        Content = "WindUI加载成功！",
+        Duration = 3
+    })
+end
 
--- 密钥系统（简化版）
-local KeySystem = {
-    ValidKeys = {"秋容", "本熊汉化", "WindUI"},
-    CurrentKey = "秋容",
-    IsValid = true
+-- 给UI库初始化时间
+task_wait(1)
+
+-- 颜色常量
+local COLORS = {
+    GRADIENT_START = Color3.fromHex("#00FF87"),
+    GRADIENT_END = Color3.fromHex("#60EFFF"),
+    BUTTON_START = Color3.fromHex("#FF0F7B"),
+    BUTTON_END = Color3.fromHex("#F89B29")
 }
 
--- 完全跳过密钥验证
-local function requireKeyOnStart()
-    print("跳过密钥验证")
-    return true
-end
+-- 图标常量
+local KEY_ICON = " 🔑"
+local CHECK_ICON = " ✅"
 
 -- 安全调用函数
 local function safeCall(func, errorMessage)
     local success, err = pcall(func)
     if not success then
-        WindUI:Notify({Title = "错误", Content = errorMessage .. ": " .. tostring(err), Duration = 5})
+        if WindUI then
+            WindUI:Notify({Title = "错误", Content = errorMessage .. ": " .. tostring(err), Duration = 5})
+        end
     end
     return success
 end
 
 -- 安全的剪贴板操作
 local function safeSetClipboard(text)
-    local success = pcall(function()
+    local success, err = pcall(function()
         if setclipboard then
             setclipboard(text)
         elseif syn and syn.write_clipboard then
@@ -243,9 +161,61 @@ local function safeSetClipboard(text)
     return success
 end
 
-print("=== 创建主界面 ===")
+-- 密钥验证系统（简化版，直接通过）
+local KeySystem = {
+    ValidKeys = {"秋容", "本熊汉化", "WindUI"},
+    CurrentKey = "秋容",
+    IsValid = true
+}
 
--- 创建主窗口
+-- 完全跳过密钥验证
+local function requireKeyOnStart()
+    print("跳过密钥验证")
+    KeySystem.CurrentKey = "秋容"
+    KeySystem.IsValid = true
+    return true
+end
+
+-- 在创建主窗口前验证密钥
+print("=== 开始密钥验证 ===")
+local keyValid = requireKeyOnStart()
+if not keyValid then
+    WindUI:Notify({Title = "错误", Content = "密钥验证失败，脚本终止", Duration = 5})
+    print("密钥验证失败，脚本终止")
+    return
+end
+
+print("密钥验证通过，继续执行主界面...")
+
+-- 检查WindUI是否真的可用
+print("=== 检查UI库状态 ===")
+print("WindUI是否存在:", WindUI ~= nil)
+print("WindUI类型:", type(WindUI))
+print("CreateWindow方法:", WindUI and type(WindUI.CreateWindow))
+
+if not WindUI or not WindUI.CreateWindow then
+    print("WindUI不可用")
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "错误",
+        Text = "WindUI功能不完整",
+        Duration = 5
+    })
+    return
+end
+
+-- 测试通知功能
+if WindUI and WindUI.Notify then
+    WindUI:Notify({
+        Title = "调试", 
+        Content = "密钥验证通过，开始创建UI",
+        Duration = 3
+    })
+else
+    print("错误：WindUI.Notify不可用")
+    return
+end
+
+-- 创建主窗口（添加错误处理）
 local Window
 local windowSuccess, windowError = pcall(function()
     Window = WindUI:CreateWindow({
@@ -256,7 +226,21 @@ local windowSuccess, windowError = pcall(function()
         Folder = "本熊汉化",
         Size = UDim2.fromOffset(580, 460),
         Transparent = true,
-        Theme = "Dark"
+        Theme = "Dark",
+        User = {
+            Enabled = true,
+            Callback = function() 
+                if safeSetClipboard("本熊汉化") then
+                    WindUI:Notify({Title = "提示", Content = "已复制作者信息", Duration = 2})
+                else
+                    WindUI:Notify({Title = "错误", Content = "剪贴板复制失败", Duration = 2})
+                end
+            end,
+            Anonymous = true
+        },
+        SideBarWidth = 200,
+        ScrollBarEnabled = true,
+        KeySystem = false
     })
 end)
 
@@ -264,43 +248,131 @@ if not windowSuccess or not Window then
     print("窗口创建失败:", windowError)
     WindUI:Notify({
         Title = "错误", 
-        Content = "窗口创建失败，使用基础功能",
+        Content = "窗口创建失败: " .. tostring(windowError),
         Duration = 5
     })
-    -- 即使窗口失败也继续执行
-    Window = {
-        Tab = function() return {
-            Section = function() return {} end,
-            Button = function() return function() end end,
-            Paragraph = function() return function() end end
-        } end,
-        SelectTab = function() end,
-        CreateTopbarButton = function() return function() end end,
-        EditOpenButton = function() end,
-        ToggleFullscreen = function() end
-    }
+    return
 end
 
 print("主窗口创建成功")
 
--- 跳过欢迎弹窗（直接继续）
-print("跳过欢迎弹窗，直接创建内容")
+-- 渐变文本函数
+function gradient(text, startColor, endColor)
+    local result = {}
+    local length = #text
+    
+    for i = 1, length do
+        local t = (i - 1) / math.max(length - 1, 1)
+        local r = math.floor((startColor.R + (endColor.R - startColor.R) * t) * 255)
+        local g = math.floor((startColor.G + (endColor.G - startColor.G) * t) * 255)
+        local b = math.floor((startColor.B + (endColor.B - startColor.B) * t) * 255)
+        
+        table.insert(result, string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i)))
+    end
+    
+    return table.concat(result)
+end
 
--- 添加快捷按钮
+-- 加载脚本函数
+local function loadScript(url, scriptName)
+    if not KeySystem.IsValid then
+        WindUI:Notify({Title = "错误", Content = "密钥已失效，请重新验证", Duration = 3})
+        return
+    end
+    
+    WindUI:Notify({Title = "提示", Content = "正在加载 " .. scriptName .. "...", Duration = 2})
+    
+    local success, result = pcall(function()
+        local response = httpGet(url)
+        if not response or #response < 50 then
+            return false, "脚本内容无效或为空"
+        end
+        
+        local loadedFunction, loadError = loadstring(response)
+        if not loadedFunction then
+            return false, "脚本编译错误: " .. tostring(loadError)
+        end
+        
+        local executeSuccess, executeError = pcall(loadedFunction)
+        if not executeSuccess then
+            return false, "脚本执行错误: " .. tostring(executeError)
+        end
+        
+        return true
+    end)
+    
+    if success and result then
+        WindUI:Notify({Title = "成功", Content = scriptName .. " 加载完成", Duration = 3})
+    else
+        local errorMsg = success and result or "网络请求失败"
+        WindUI:Notify({Title = "错误", Content = scriptName .. " 加载失败: " .. errorMsg, Duration = 5})
+    end
+end
+
+-- 欢迎弹窗
+print("显示欢迎弹窗...")
+local Confirmed = false
+
+WindUI:Popup({
+    Title = "欢迎使用本熊汉化",
+    Icon = "rbxassetid://112682688917044",
+    IconThemed = true,
+    Content = "本熊汉化 WindUI Lib",  
+    Buttons = {
+        {
+            Title = "退出",
+            Callback = function() 
+                WindUI:Notify({Title = "提示", Content = "已退出", Duration = 2})
+                Window:Destroy()
+                return
+            end,
+            Variant = "Secondary",
+        },
+        {
+            Title = "使用",
+            Icon = "arrow-right",
+            Callback = function() 
+                Confirmed = true 
+                WindUI:Notify({Title = "欢迎", Content = "开始使用本熊汉化", Duration = 2})
+            end,
+            Variant = "Primary",
+        }
+    }
+})
+
+print("等待用户确认...")
+-- 等待用户确认，但设置超时
+local startTime = tick()
+while not Confirmed do
+    if tick() - startTime > 30 then -- 30秒超时
+        print("等待确认超时，自动继续")
+        Confirmed = true
+    end
+    task_wait(0.1)
+end
+print("用户确认，继续创建UI...")
+
+-- 添加重新验证按钮
 Window:CreateTopbarButton("重新验证", "key", function() 
-    WindUI:Notify({Title = "提示", Content = "密钥验证通过！", Duration = 3})
+    KeySystem.IsValid = true
+    WindUI:Notify({Title = "成功", Content = "密钥验证通过！", Duration = 3})
 end, 990)
 
 Window:CreateTopbarButton("全屏", "battery-plus", function() 
-    if Window.ToggleFullscreen then
-        Window:ToggleFullscreen()
-    end
+    Window:ToggleFullscreen()
     WindUI:Notify({Title = "提示", Content = "切换全屏模式", Duration = 2})
 end, 989)
 
-print("创建标签页...")
+Window:EditOpenButton({
+    Title = "本熊汉化",
+    Icon = "monitor",
+    CornerRadius = UDim.new(0,16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new(COLORS.BUTTON_START, COLORS.BUTTON_END),
+    Draggable = true,
+})
 
--- 创建标签页
+print("创建标签页...")
 local Tabs = {
     Home = Window:Tab({ Title = "主页", Icon = "crown" }),
     Main = Window:Tab({ Title = "99夜", Icon = "zap" }),
@@ -309,18 +381,20 @@ local Tabs = {
     Other = Window:Tab({ Title = "工具", Icon = "settings" })
 }
 
+Window:SelectTab(1)
+
 -- 主页内容
 Tabs.Home:Paragraph({
     Title = "欢迎使用本熊汉化",
-    Desc = "专为Roblox脚本汉化 - 快速启动模式",
+    Desc = "专为Roblox脚本汉化 - 密钥验证系统已启用",
 })
 
 Tabs.Home:Paragraph({
-    Title = "系统状态",
-    Desc = "• 界面加载: 成功\n• 密钥验证: 通过\n• 模式: 简化界面",
+    Title = "更新内容",
+    Desc = "• 增加了偷走脑红汉化，优化了界面\n• 简化了密钥验证流程",
 })
 
-Tabs.Home:Section({Title = "快捷功能"})
+Tabs.Home:Section({Title = "主页"})
 
 Tabs.Home:Button({
     Title = "复制QQ群号",
@@ -334,7 +408,7 @@ Tabs.Home:Button({
 })
 
 Tabs.Home:Button({
-    Title = "复制快手号",
+    Title = "复制老鼠快手号",
     Callback = function()
         if safeSetClipboard("lousun7891") then
             WindUI:Notify({Title = "快手号", Content = "快手号已复制到剪贴板", Duration = 3})
@@ -344,19 +418,13 @@ Tabs.Home:Button({
     end
 })
 
-Tabs.Home:Button({
-    Title = "测试通知",
-    Callback = function()
-        WindUI:Notify({Title = "测试", Content = "界面功能正常！", Duration = 3})
-    end
-})
-
 -- 其他标签页内容
 Tabs.Main:Section({Title = "99夜脚本"})
 Tabs.Main:Button({
     Title = "加载99夜汉化",
     Callback = function()
-        WindUI:Notify({Title = "99夜", Content = "开始加载汉化脚本...", Duration = 3})
+        WindUI:Notify({Title = "提示", Content = "加载99夜汉化脚本...", Duration = 3})
+        -- 这里可以添加实际的脚本加载代码
     end
 })
 
@@ -364,7 +432,8 @@ Tabs.Ninja:Section({Title = "死铁轨脚本"})
 Tabs.Ninja:Button({
     Title = "加载死铁轨汉化",
     Callback = function()
-        WindUI:Notify({Title = "死铁轨", Content = "开始加载汉化脚本...", Duration = 3})
+        WindUI:Notify({Title = "提示", Content = "加载死铁轨汉化脚本...", Duration = 3})
+        -- 这里可以添加实际的脚本加载代码
     end
 })
 
@@ -372,7 +441,8 @@ Tabs.Oth:Section({Title = "偷走脑红脚本"})
 Tabs.Oth:Button({
     Title = "加载偷走脑红汉化",
     Callback = function()
-        WindUI:Notify({Title = "偷走脑红", Content = "开始加载汉化脚本...", Duration = 3})
+        WindUI:Notify({Title = "提示", Content = "加载偷走脑红汉化脚本...", Duration = 3})
+        -- 这里可以添加实际的脚本加载代码
     end
 })
 
@@ -390,16 +460,16 @@ Tabs.Other:Button({
     Callback = function()
         WindUI:Notify({
             Title = "系统信息", 
-            Content = "本熊汉化 - 简化模式\n所有功能正常可用",
+            Content = "本熊汉化 - WindUI模式\n密钥状态: 验证通过\n当前密钥: " .. KeySystem.CurrentKey,
             Duration = 5
         })
     end
 })
 
-print("界面创建完成！")
+print("界面创建完成，显示成功通知")
 WindUI:Notify({
     Title = "本熊汉化", 
-    Content = "界面加载完成！请选择需要的功能。",
+    Content = "界面加载完成！密钥验证通过，请选择需要的脚本。",
     Duration = 4
 })
 
