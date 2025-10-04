@@ -1,4 +1,3 @@
--- 环境检查和安全函数定义
 local function safeRequire(func, fallback)
     local success, result = pcall(func)
     return success and result or fallback
