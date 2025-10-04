@@ -9,6 +9,7 @@ local translationDict = {
 local originalTexts = {}
 local isTranslating = false
 local mainUI = nil
+local connection = nil  -- 添加连接变量
 
 -- 安全的执行函数
 local function safeCall(func, errorMessage)
@@ -152,6 +153,12 @@ end
 -- 恢复原始文本
 local function restoreOriginalTexts()
     safeCall(function()
+        -- 断开连接
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        
         for obj, properties in pairs(originalTexts) do
             if obj and obj.Parent then
                 for property, value in pairs(properties) do
@@ -168,15 +175,18 @@ end
 -- 开始翻译
 local function startTranslation()
     safeCall(function()
+        -- 先断开之前的连接
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        
         processAllGUIObjects(playerGui)
         
         -- 监听新对象
-        local connection
         connection = playerGui.DescendantAdded:Connect(function(descendant)
             if isTranslating then
                 processGUIObject(descendant)
-            else
-                connection:Disconnect()
             end
         end)
     end, "启动翻译失败")
@@ -193,7 +203,10 @@ local function initialize()
         
         if mainUI then
             print("[汉化工具] 加载成功！")
-            print("[汉化工具] 词典条目数:", #translationDict)
+            -- 正确计算词典条目数
+            local count = 0
+            for _ in pairs(translationDict) do count = count + 1 end
+            print("[汉化工具] 词典条目数:", count)
         else
             warn("[汉化工具] UI创建失败")
         end
