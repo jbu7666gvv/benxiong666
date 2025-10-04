@@ -9,7 +9,7 @@ local translationDict = {
 local originalTexts = {}
 local isTranslating = false
 local mainUI = nil
-local connection = nil  -- 添加连接变量
+local connection = nil
 
 -- 安全的执行函数
 local function safeCall(func, errorMessage)
@@ -80,6 +80,12 @@ local function createSimpleUI()
         
         -- 按钮事件
         toggleButton.MouseButton1Click:Connect(function()
+            -- 防止快速连续点击
+            if toggleButton:GetAttribute("ClickCooldown") then
+                return
+            end
+            toggleButton:SetAttribute("ClickCooldown", true)
+            
             isTranslating = not isTranslating
             
             if isTranslating then
@@ -91,6 +97,11 @@ local function createSimpleUI()
                 statusLabel.Text = "状态: 已关闭"
                 restoreOriginalTexts()
             end
+            
+            -- 0.5秒后解除点击冷却
+            delay(0.5, function()
+                toggleButton:SetAttribute("ClickCooldown", false)
+            end)
         end)
         
         screenGui.Parent = playerGui
@@ -153,7 +164,7 @@ end
 -- 恢复原始文本
 local function restoreOriginalTexts()
     safeCall(function()
-        -- 断开连接
+        -- 确保连接被断开
         if connection then
             connection:Disconnect()
             connection = nil
@@ -169,17 +180,22 @@ local function restoreOriginalTexts()
             end
         end
         originalTexts = {}
+        
+        print("[汉化工具] 已恢复所有文本，连接状态:", connection == nil and "已断开" or "仍连接")
     end, "恢复原始文本失败")
 end
 
 -- 开始翻译
 local function startTranslation()
     safeCall(function()
-        -- 先断开之前的连接
+        -- 确保之前的连接被断开
         if connection then
             connection:Disconnect()
             connection = nil
         end
+        
+        -- 清空之前的记录
+        originalTexts = {}
         
         processAllGUIObjects(playerGui)
         
@@ -189,6 +205,8 @@ local function startTranslation()
                 processGUIObject(descendant)
             end
         end)
+        
+        print("[汉化工具] 翻译已启动，连接状态:", connection ~= nil)
     end, "启动翻译失败")
 end
 
