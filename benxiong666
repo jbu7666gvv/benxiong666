@@ -9,121 +9,39 @@ local task_wait = task.wait
 local collectgarbage_collect = collectgarbage
 local loadstring = loadstring or load
 
-print("脚本开始执行...")
-
--- 在 httpGet 函数中添加详细诊断
+-- 安全的 HTTP 获取
 local function httpGet(url)
-    print("详细诊断HTTP请求: " .. url)
-    
-    -- 测试基本的HTTP功能
-    local httpTestSuccess, httpTestResult = pcall(function()
-        -- 检查可用的HTTP方法
-        local availableMethods = {}
-        if game and game.HttpGet then table.insert(availableMethods, "game:HttpGet") end
-        if syn and syn.request then table.insert(availableMethods, "syn.request") end
-        if request then table.insert(availableMethods, "request") end
-        if fluxus and fluxus.request then table.insert(availableMethods, "fluxus.request") end
-        
-        print("可用的HTTP方法: " .. table.concat(availableMethods, ", "))
-        
-        if #availableMethods == 0 then
-            return nil, "没有可用的HTTP方法"
-        end
-        
-        -- 尝试实际请求
-        local success, result = pcall(function()
-            if game and game.HttpGet then
-                return game:HttpGet(url)
-            elseif syn and syn.request then
-                local response = syn.request({Url = url, Method = "GET", Timeout = 10})
-                return response.Body
-            elseif request then
-                local response = request({Url = url, Method = "GET"})
-                return response.Body
-            elseif fluxus and fluxus.request then
-                local response = fluxus.request({Url = url, Method = "GET"})
-                return response.Body
-            end
-        end)
-        
-        if success then
-            print("HTTP请求成功，响应长度: " .. (result and #result or 0))
-            return result
+    local success, result = pcall(function()
+        if game.HttpGet then
+            return game:HttpGet(url, true)
+        elseif syn and syn.request then
+            local response = syn.request({Url = url, Method = "GET"})
+            return response.Body
+        elseif request then
+            local response = request({Url = url, Method = "GET"})
+            return response.Body
         else
-            return nil, "请求失败: " .. tostring(result)
+            error("没有可用的 HTTP 方法")
         end
     end)
-    
-    if httpTestSuccess and httpTestResult then
-        return httpTestResult
-    else
-        print("HTTP诊断失败: " .. tostring(httpTestResult))
-        return nil
-    end
-end 
+    return success and result or nil
+end
 
--- 简化的 WindUI 加载函数
-local function loadWindUISafely()
-    print("开始加载 WindUI...")
-    
-    -- 使用更可靠的源
-    local sources = {
-        "https://raw.githubusercontent.com/Footagesus/WindUI/main/src/main.lua",
-        "https://cdn.jsdelivr.net/gh/Footagesus/WindUI@main/src/main.lua",
-    }
-    
-    for i, url in ipairs(sources) do
-        print("尝试源 " .. i .. ": " .. url)
-        local source = httpGet(url)
-        if source then
-            print("成功获取源 " .. i .. ", 长度: " .. #source)
-            local success, lib = pcall(loadstring, source)
-            if success and lib then
-                print("WindUI 加载成功")
-                local ui = lib()
-                if ui and ui.CreateWindow then
-                    print("WindUI 功能正常")
-                    return ui
-                else
-                    print("WindUI 功能不完整")
-                end
-            else
-                print("WindUI 编译失败: " .. tostring(lib))
-            end
+-- 安全的剪贴板操作
+local function safeSetClipboard(text)
+    local success, err = pcall(function()
+        if setclipboard then
+            setclipboard(text)
+        elseif syn and syn.write_clipboard then
+            syn.write_clipboard(text)
+        elseif write_clipboard then
+            write_clipboard(text)
         else
-            print("源 " .. i .. " 请求失败")
+            error("没有可用的剪贴板方法")
         end
-        task_wait(1)
-    end
-    
-    print("所有WindUI源都失败")
-    return nil
+    end)
+    return success
 end
-
--- 加载 WindUI 库
-print("=== 开始加载UI库 ===")
-local WindUISuccess, WindUI = pcall(loadWindUISafely)
-
-if not WindUISuccess or not WindUI then
-    print("WindUI加载失败")
-    -- 直接使用游戏内置通知
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "本熊汉化",
-        Text = "WindUI加载失败，请检查网络",
-        Duration = 5
-    })
-    return
-else
-    print("WindUI加载成功")
-    WindUI:Notify({
-        Title = "本熊汉化",
-        Content = "WindUI加载成功！",
-        Duration = 3
-    })
-end
-
--- 给UI库初始化时间
-task_wait(1)
 
 -- 颜色常量
 local COLORS = {
@@ -148,118 +66,21 @@ local function safeCall(func, errorMessage)
     return success
 end
 
--- 安全的剪贴板操作
-local function safeSetClipboard(text)
-    local success, err = pcall(function()
-        if setclipboard then
-            setclipboard(text)
-        elseif syn and syn.write_clipboard then
-            syn.write_clipboard(text)
-        elseif write_clipboard then
-            write_clipboard(text)
-        else
-            error("没有可用的剪贴板方法")
-        end
-    end)
-    return success
-end
-
--- 密钥验证系统（简化版，直接通过）
-local KeySystem = {
-    ValidKeys = {"秋容", "本熊汉化", "WindUI"},
-    CurrentKey = "秋容",
-    IsValid = true
-}
-
--- 完全跳过密钥验证
-local function requireKeyOnStart()
-    print("跳过密钥验证")
-    KeySystem.CurrentKey = "秋容"
-    KeySystem.IsValid = true
-    return true
-end
-
--- 在创建主窗口前验证密钥
-print("=== 开始密钥验证 ===")
-local keyValid = requireKeyOnStart()
-if not keyValid then
-    WindUI:Notify({Title = "错误", Content = "密钥验证失败，脚本终止", Duration = 5})
-    print("密钥验证失败，脚本终止")
-    return
-end
-
-print("密钥验证通过，继续执行主界面...")
-
--- 检查WindUI是否真的可用
-print("=== 检查UI库状态 ===")
-print("WindUI是否存在:", WindUI ~= nil)
-print("WindUI类型:", type(WindUI))
-print("CreateWindow方法:", WindUI and type(WindUI.CreateWindow))
-
-if not WindUI or not WindUI.CreateWindow then
-    print("WindUI不可用")
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "错误",
-        Text = "WindUI功能不完整",
-        Duration = 5
-    })
-    return
-end
-
--- 测试通知功能
-if WindUI and WindUI.Notify then
-    WindUI:Notify({
-        Title = "调试", 
-        Content = "密钥验证通过，开始创建UI",
-        Duration = 3
-    })
-else
-    print("错误：WindUI.Notify不可用")
-    return
-end
-
--- 创建主窗口（添加错误处理）
-local Window
-local windowSuccess, windowError = pcall(function()
-    Window = WindUI:CreateWindow({
-        Title = "本熊汉化",
-        Icon = "rbxassetid://129260712070622",
-        IconThemed = true,
-        Author = "本熊汉化",
-        Folder = "本熊汉化",
-        Size = UDim2.fromOffset(580, 460),
-        Transparent = true,
-        Theme = "Dark",
-        User = {
-            Enabled = true,
-            Callback = function() 
-                if safeSetClipboard("本熊汉化") then
-                    WindUI:Notify({Title = "提示", Content = "已复制作者信息", Duration = 2})
-                else
-                    WindUI:Notify({Title = "错误", Content = "剪贴板复制失败", Duration = 2})
-                end
-            end,
-            Anonymous = true
-        },
-        SideBarWidth = 200,
-        ScrollBarEnabled = true,
-        KeySystem = false
-    })
+-- 加载 WindUI 库
+local WindUISuccess, WindUI = pcall(function()
+    local windUISource = httpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua")
+    if windUISource then
+        return loadstring(windUISource)()
+    else
+        error("无法加载 WindUI 库")
+    end
 end)
 
-if not windowSuccess or not Window then
-    print("窗口创建失败:", windowError)
-    WindUI:Notify({
-        Title = "错误", 
-        Content = "窗口创建失败: " .. tostring(windowError),
-        Duration = 5
-    })
+if not WindUISuccess then
+    warn("WindUI 加载失败: " .. tostring(WindUI))
     return
 end
 
-print("主窗口创建成功")
-
--- 渐变文本函数
 function gradient(text, startColor, endColor)
     local result = {}
     local length = #text
@@ -276,13 +97,7 @@ function gradient(text, startColor, endColor)
     return table.concat(result)
 end
 
--- 加载脚本函数
 local function loadScript(url, scriptName)
-    if not KeySystem.IsValid then
-        WindUI:Notify({Title = "错误", Content = "密钥已失效，请重新验证", Duration = 3})
-        return
-    end
-    
     WindUI:Notify({Title = "提示", Content = "正在加载 " .. scriptName .. "...", Duration = 2})
     
     local success, result = pcall(function()
@@ -312,22 +127,18 @@ local function loadScript(url, scriptName)
     end
 end
 
--- 欢迎弹窗
-print("显示欢迎弹窗...")
 local Confirmed = false
 
 WindUI:Popup({
     Title = "欢迎使用本熊汉化",
     Icon = "rbxassetid://112682688917044",
     IconThemed = true,
-    Content = "本熊汉化 WindUI Lib",  
+    Content = "本熊汉化" .. gradient("WindUI", COLORS.GRADIENT_START, COLORS.GRADIENT_END) .. " Lib",  
     Buttons = {
         {
             Title = "退出",
             Callback = function() 
                 WindUI:Notify({Title = "提示", Content = "已退出", Duration = 2})
-                Window:Destroy()
-                return
             end,
             Variant = "Secondary",
         },
@@ -343,23 +154,37 @@ WindUI:Popup({
     }
 })
 
-print("等待用户确认...")
--- 等待用户确认，但设置超时
-local startTime = tick()
-while not Confirmed do
-    if tick() - startTime > 30 then -- 30秒超时
-        print("等待确认超时，自动继续")
-        Confirmed = true
-    end
-    task_wait(0.1)
-end
-print("用户确认，继续创建UI...")
+repeat task_wait() until Confirmed
 
--- 添加重新验证按钮
-Window:CreateTopbarButton("重新验证", "key", function() 
-    KeySystem.IsValid = true
-    WindUI:Notify({Title = "成功", Content = "密钥验证通过！", Duration = 3})
-end, 990)
+local Window = WindUI:CreateWindow({
+    Title = "本熊汉化",
+    Icon = "rbxassetid://129260712070622",
+    IconThemed = true,
+    Author = "本熊汉化",
+    Folder = "本熊汉化",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = true,
+    Theme = "Dark",
+    User = {
+        Enabled = true,
+        Callback = function() 
+            if safeSetClipboard("本熊汉化") then
+                WindUI:Notify({Title = "提示", Content = "已复制作者信息", Duration = 2})
+            else
+                WindUI:Notify({Title = "错误", Content = "剪贴板复制失败", Duration = 2})
+            end
+        end,
+        Anonymous = true
+    },
+    SideBarWidth = 200,
+    ScrollBarEnabled = true,
+    KeySystem = {
+        Key = { "秋容" },
+        Note = "谁没目还爱圈钱？",
+        URL = "秋容",
+        SaveKey = true,
+    }
+})
 
 Window:CreateTopbarButton("全屏", "battery-plus", function() 
     Window:ToggleFullscreen()
@@ -375,7 +200,6 @@ Window:EditOpenButton({
     Draggable = true,
 })
 
-print("创建标签页...")
 local Tabs = {
     Home = Window:Tab({ Title = "主页", Icon = "crown" }),
     Main = Window:Tab({ Title = "99夜", Icon = "zap" }),
@@ -386,15 +210,14 @@ local Tabs = {
 
 Window:SelectTab(1)
 
--- 主页内容
 Tabs.Home:Paragraph({
     Title = "欢迎使用本熊汉化",
-    Desc = "专为Roblox脚本汉化 - 密钥验证系统已启用",
+    Desc = "专为Roblox脚本汉化",
 })
 
 Tabs.Home:Paragraph({
     Title = "更新内容",
-    Desc = "• 增加了偷走脑红汉化，优化了界面\n• 简化了密钥验证流程",
+    Desc = "• 增加了偷走脑红汉化，优化了界面",
 })
 
 Tabs.Home:Section({Title = "主页"})
@@ -421,59 +244,128 @@ Tabs.Home:Button({
     end
 })
 
--- 其他标签页内容
+Tabs.Home:Section({Title = "工具"})
+
+-- 在工具部分的重新加载按钮替换为以下代码：
+
+Tabs.Home:Button({
+    Title = "重新加载界面",
+    Callback = function()
+        WindUI:Notify({Title = "提示", Content = "重新加载界面中...", Duration = 2})
+        
+        -- 保存重要信息
+        local savedData = {
+            keySystemEnabled = Window.KeySystem and true or false,
+            key = Window.KeySystem and Window.KeySystem.Key or nil
+        }
+        
+        -- 延迟执行以确保通知显示
+        task.wait(1)
+        
+        -- 完全清理UI
+        if Window then
+            pcall(function() Window:Destroy() end)
+            Window = nil
+        end
+        
+        -- 强制垃圾回收
+        for i = 1, 5 do
+            task.wait(0.1)
+            collectgarbage("collect")
+        end
+        
+        -- 使用游戏的重置功能（更可靠的方法）
+        if game:GetService("CoreGui"):FindFirstChild("WindUI") then
+            game:GetService("CoreGui").WindUI:Destroy()
+        end
+        
+        -- 重新执行脚本的替代方案
+        task.wait(0.5)
+        
+        -- 方法1：尝试通过重新获取脚本来重启
+        local success, result = pcall(function()
+            local restartScript = httpGet("https://raw.githubusercontent.com/jbu7666gvv/benhan/main/benhan.lua")
+            if restartScript then
+                -- 创建新的脚本来执行
+                local newScript = Instance.new("LocalScript")
+                newScript.Source = restartScript
+                newScript.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerScripts")
+            else
+                error("无法获取重启脚本")
+            end
+        end)
+        
+        if not success then
+            -- 方法2：简单的重新初始化
+            WindUI:Notify({Title = "错误", Content = "完全重启失败，请手动重新执行脚本", Duration = 5})
+        end
+    end
+})
+
 Tabs.Main:Section({Title = "99夜脚本"})
-Tabs.Main:Button({
-    Title = "加载99夜汉化",
-    Callback = function()
-        WindUI:Notify({Title = "提示", Content = "加载99夜汉化脚本...", Duration = 3})
-        -- 这里可以添加实际的脚本加载代码
-    end
-})
 
-Tabs.Ninja:Section({Title = "死铁轨脚本"})
+local mainScripts = {
+    {
+        Title = "h4x (要卡密)",
+        Desc = "汉化",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/h4x6/refs/heads/main/h4x%E6%B1%89%E5%8C%96",
+        RequiresKey = true
+    },
+    {
+        Title = "虚空 (无卡密)", 
+        Desc = "汉化",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/xuu/refs/heads/main/xuu",
+        RequiresKey = false
+    },
+    {
+        Title = "ToastyXD Hub (要卡密)",
+        Desc = "汉化版ToastyXD Hub",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/toastyxdhub/refs/heads/main/toastyxdhub",
+        RequiresKey = true
+    },
+    {
+        Title = "LunorLounge (要卡密)",
+        Desc = "半汉化版 - 已停止更新",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/LunorLounge/refs/heads/main/LunorLounge",
+        RequiresKey = true
+    },
+    {
+        Title = "CpsHub(无卡密)",
+        Desc = "汉化",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/CpsHub/refs/heads/main/CpsHub",
+        RequiresKey = true
+    }
+}
+
+for i, scriptInfo in ipairs(mainScripts) do
+    Tabs.Main:Button({
+        Title = scriptInfo.Title .. (scriptInfo.RequiresKey and KEY_ICON or CHECK_ICON),
+        Desc = scriptInfo.Desc,
+        Callback = function()
+            loadScript(scriptInfo.URL, scriptInfo.Title)
+        end
+    })
+end
+
+Tabs.Ninja:Section({Title = "死铁轨"})
+
 Tabs.Ninja:Button({
-    Title = "加载死铁轨汉化",
+    Title = "RINGTA (无卡密)" .. CHECK_ICON,
+    Desc = "汉化",
     Callback = function()
-        WindUI:Notify({Title = "提示", Content = "加载死铁轨汉化脚本...", Duration = 3})
-        -- 这里可以添加实际的脚本加载代码
+        loadScript("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi", "RINGTA脚本")
     end
 })
 
-Tabs.Oth:Section({Title = "偷走脑红脚本"})
+Tabs.Oth:Section({Title = "偷走脑红"})
+
 Tabs.Oth:Button({
-    Title = "加载偷走脑红汉化",
+    Title = "MIRANDA HUB (无卡密)" .. CHECK_ICON,
+    Desc = "汉化",
     Callback = function()
-        WindUI:Notify({Title = "提示", Content = "加载偷走脑红汉化脚本...", Duration = 3})
-        -- 这里可以添加实际的脚本加载代码
+        WindUI:Notify({Title = "提示", Content = "正在加载脚本...", Duration = 2})
+        loadScript("https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/1", "MIRANDA HUB脚本")
     end
 })
 
-Tabs.Other:Section({Title = "工具"})
-Tabs.Other:Button({
-    Title = "清理内存",
-    Callback = function()
-        collectgarbage_collect()
-        WindUI:Notify({Title = "提示", Content = "内存清理完成", Duration = 2})
-    end
-})
-
-Tabs.Other:Button({
-    Title = "显示信息",
-    Callback = function()
-        WindUI:Notify({
-            Title = "系统信息", 
-            Content = "本熊汉化 - WindUI模式\n密钥状态: 验证通过\n当前密钥: " .. KeySystem.CurrentKey,
-            Duration = 5
-        })
-    end
-})
-
-print("界面创建完成，显示成功通知")
-WindUI:Notify({
-    Title = "本熊汉化", 
-    Content = "界面加载完成！密钥验证通过，请选择需要的脚本。",
-    Duration = 4
-})
-
-print("=== 脚本执行完成 ===")
+WindUI:Notify({Title = "本熊汉化", Content = "界面加载完成！请选择需要的脚本。", Duration = 4})
