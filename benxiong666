@@ -1,4 +1,4 @@
-WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 function gradient(text, startColor, endColor)
     local result = ""
@@ -17,6 +17,90 @@ function gradient(text, startColor, endColor)
     return result
 end
 
+local function loadScript(url, scriptName)
+    WindUI:Notify({Title = "提示", Content = "正在加载 " .. scriptName .. "...", Duration = 2})
+    
+    local success, result = pcall(function()
+        local response = game:HttpGet(url, true)
+        if not response or #response < 50 then
+            return false, "脚本内容无效或为空"
+        end
+        
+        local loadSuccess, loadError = pcall(loadstring, response)
+        if not loadSuccess then
+            return false, "脚本执行错误: " .. tostring(loadError)
+        end
+        
+        return true, "加载成功"
+    end)
+    
+    if success and result == true then
+        WindUI:Notify({Title = "成功", Content = scriptName .. " 加载完成", Duration = 3})
+    else
+        local errorMsg = success and result or "网络请求失败"
+        WindUI:Notify({Title = "错误", Content = scriptName .. " 加载失败: " .. errorMsg, Duration = 5})
+    end
+end
+
+local function setupChineseLocalization()
+    if not game then
+        WindUI:Notify({Title = "错误", Content = "游戏环境未找到", Duration = 3})
+        return false
+    end
+    
+    if not getrawmetatable then
+        WindUI:Notify({Title = "警告", Content = "当前执行器不支持元表操作", Duration = 3})
+        return false
+    end
+    
+    local success, m = pcall(getrawmetatable, game)
+    if not success or not m then
+        WindUI:Notify({Title = "错误", Content = "无法获取游戏元表", Duration = 3})
+        return false
+    end
+    
+    local originalNewIndex = m.__newindex
+    
+    local translationTable = {
+        ["TOOLS"] = "工具",
+        ["INF JUMP"] = "无限跳跃",
+        ["DESVNC BODY"] = "身体不同步",
+        ["3RD FLOOR"] = "三楼",
+        ["FLY TO BASE"] = "飞往基地",
+        ["TELEPORT"] = "传送",
+        ["SPEED"] = "速度",
+        ["FLY"] = "飞行",
+        ["NOCLIP"] = "穿墙",
+        ["GOD MODE"] = "上帝模式"
+    }
+
+    local setReadonlySuccess = pcall(setreadonly, m, false)
+    if not setReadonlySuccess then
+        WindUI:Notify({Title = "错误", Content = "无法修改元表权限", Duration = 3})
+        return false
+    end
+    
+    if typeof(newcclosure) == "function" then
+        m.__newindex = newcclosure(function(t, k, v)
+            if k == "Text" and (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) then
+                v = translationTable[v] or v
+            end
+            return originalNewIndex(t, k, v)
+        end)
+    else
+        m.__newindex = function(t, k, v)
+            if k == "Text" and (t:IsA("TextLabel") or t:IsA("TextButton") or t:IsA("TextBox")) then
+                v = translationTable[v] or v
+            end
+            return originalNewIndex(t, k, v)
+        end
+    end
+    
+    pcall(setreadonly, m, true)
+    WindUI:Notify({Title = "成功", Content = "汉化环境设置完成", Duration = 2})
+    return true
+end
+
 local Confirmed = false
 
 WindUI:Popup({
@@ -25,22 +109,26 @@ WindUI:Popup({
     IconThemed = true,
     Content = "本熊汉化" .. gradient("WindUI", Color3.fromHex("#00FF87"), Color3.fromHex("#60EFFF")) .. " Lib",  
     Buttons = {
-        
         {
             Title = "退出",
-            Callback = function() end,
+            Callback = function() 
+                WindUI:Notify({Title = "提示", Content = "已退出", Duration = 2})
+            end,
             Variant = "Secondary",
         },
         {
             Title = "使用",
             Icon = "arrow-right",
-            Callback = function() Confirmed = true end,
+            Callback = function() 
+                Confirmed = true 
+                WindUI:Notify({Title = "欢迎", Content = "开始使用本熊汉化", Duration = 2})
+            end,
             Variant = "Primary",
         }
     }
 })
 
-repeat wait() until Confirmed
+repeat task.wait() until Confirmed
 
 local Window = WindUI:CreateWindow({
     Title = "本熊汉化",
@@ -53,15 +141,31 @@ local Window = WindUI:CreateWindow({
     Theme = "Dark",
     User = {
         Enabled = true,
-        Callback = function() print("clicked") end,
+        Callback = function() 
+            setclipboard("本熊汉化")
+            WindUI:Notify({Title = "提示", Content = "已复制作者信息", Duration = 2})
+        end,
         Anonymous = true
     },
     SideBarWidth = 200,
-    ScrollBarEnabled = true
+    ScrollBarEnabled = true,
+    KeySystem = {
+        Key = { "秋容" },
+        Note = "谁没目还爱圈钱？",
+        URL = "秋容",
+        SaveKey = true,
+    }
 })
 
-Window:CreateTopbarButton("MyCustomButton1", "bird", function() print("clicked 1!") end, 990)
-Window:CreateTopbarButton("MyCustomButton3", "battery-plus", function() Window:ToggleFullscreen() end, 989)
+Window:CreateTopbarButton("Discord", "bird", function() 
+    setclipboard("https://discord.gg/example")
+    WindUI:Notify({Title = "Discord", Content = "链接已复制到剪贴板", Duration = 3})
+end, 990)
+
+Window:CreateTopbarButton("全屏", "battery-plus", function() 
+    Window:ToggleFullscreen()
+    WindUI:Notify({Title = "提示", Content = "切换全屏模式", Duration = 2})
+end, 989)
 
 Window:EditOpenButton({
     Title = "本熊汉化",
@@ -76,14 +180,23 @@ local Tabs = {
     Home = Window:Tab({ Title = "主页", Icon = "crown" }),
     Main = Window:Tab({ Title = "99夜", Icon = "zap" }),
     Ninja = Window:Tab({ Title = "死铁轨", Icon = "user" }),
+    Oth = Window:Tab({ Title = "偷走脑红", Icon = "settings" }),
+    Other = Window:Tab({ Title = "工具", Icon = "settings" })
 }
 
 Window:SelectTab(1)
 
 Tabs.Home:Paragraph({
-    Title = "欢迎",
-    Desc = "本熊汉化",
+    Title = "欢迎使用本熊汉化",
+    Desc = "专为Roblox脚本汉化",
 })
+
+Tabs.Home:Paragraph({
+    Title = "更新内容",
+    Desc = "• 增加了偷走脑红汉化，优化了界面",
+})
+
+Tabs.Home:Section({Title = "主页"})
 
 Tabs.Home:Button({
     Title = "复制QQ群号",
@@ -94,61 +207,97 @@ Tabs.Home:Button({
 })
 
 Tabs.Home:Button({
-    Title = "老鼠",
+    Title = "复制老鼠快手号",
     Callback = function()
         setclipboard("lousun7891")
-        WindUI:Notify({Title = "快手号", Content = "已复制到剪贴板", Duration = 3})
+        WindUI:Notify({Title = "快手号", Content = "快手号已复制到剪贴板", Duration = 3})
     end
 })
 
-Tabs.Main:Button({
-    Title = "h4x(要卡密)",
-    Desc = "汉化",
+Tabs.Home:Section({Title = "工具"})
+
+Tabs.Home:Button({
+    Title = "重新加载界面",
     Callback = function()
-        pcall(function()
-            local response = loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/h4x6/refs/heads/main/h4x%E6%B1%89%E5%8C%96"))()
-            if response and #response > 100 then
-                loadstring(response)()
-            end
-        end)
+        WindUI:Notify({Title = "提示", Content = "重新加载界面中...", Duration = 2})
+        task.wait(1)
     end
 })
 
-Tabs.Main:Button({
-    Title = "虚空(无卡密)",
-    Desc = "汉化",
-    Callback = function()
-        pcall(function()
-            local response = loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/xuu/refs/heads/main/xuu"))()
-            if response and #response > 100 then
-                loadstring(response)()
-            end
-        end)
-    end
-})
+Tabs.Main:Section({Title = "99夜脚本"})
 
-Tabs.Main:Button({
-    Title = "ToastyXD Hub(要卡密)",
-    Desc = "汉化",
-    Callback = function()
-        pcall(function()
-            local response = loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/toastyxdhub/refs/heads/main/toastyxdhub"))()
-            if response and #response > 100 then
-                loadstring(response)()
-            end
-        end)
-    end
-})
+local mainScripts = {
+    {
+        Title = "h4x (要卡密)",
+        Desc = "汉化",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/h4x6/refs/heads/main/h4x%E6%B1%89%E5%8C%96",
+        RequiresKey = true
+    },
+    {
+        Title = "虚空 (无卡密)", 
+        Desc = "汉化",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/xuu/refs/heads/main/xuu",
+        RequiresKey = false
+    },
+    {
+        Title = "ToastyXD Hub (要卡密)",
+        Desc = "汉化版ToastyXD Hub",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/toastyxdhub/refs/heads/main/toastyxdhub",
+        RequiresKey = true
+    },
+    {
+        Title = "LunorLounge (要卡密)",
+        Desc = "半汉化版 - 已停止更新",
+        URL = "https://raw.githubusercontent.com/jbu7666gvv/LunorLounge/refs/heads/main/LunorLounge",
+        RequiresKey = true
+    }
+}
+
+for i, scriptInfo in ipairs(mainScripts) do
+    Tabs.Main:Button({
+        Title = scriptInfo.Title .. (scriptInfo.RequiresKey and " 🔑" or " ✅"),
+        Desc = scriptInfo.Desc,
+        Callback = function()
+            loadScript(scriptInfo.URL, scriptInfo.Title)
+        end
+    })
+end
+
+Tabs.Ninja:Section({Title = "死铁轨"})
 
 Tabs.Ninja:Button({
-    Title = "RINGTA(无卡密)",
+    Title = "RINGTA (无卡密) ✅",
     Desc = "汉化",
     Callback = function()
-        pcall(function()
-            local response = loadstring(game:HttpGet("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi"))()
-            if response and #response > 100 then
-                loadstring(response)()
-            end
-        end)
+        loadScript("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi")
     end
 })
+
+Tabs.Oth:Section({Title = "偷走脑红"})
+
+Tabs.Oth:Button({
+    Title = "MIRANDA HUB (无卡密) ✅",
+    Desc = "汉化",
+    Callback = function()
+        WindUI:Notify({Title = "提示", Content = "正在设置汉化环境...", Duration = 2})
+        
+        local localizationSuccess = pcall(setupChineseLocalization)
+        if not localizationSuccess then
+            WindUI:Notify({Title = "错误", Content = "汉化环境设置失败，部分功能可能无法使用", Duration = 4})
+        end
+        
+        loadScript("https://pastefy.app/JJVhs3rK/raw")
+    end
+})
+
+Tabs.Other:Section({Title = "工具"})
+
+Tabs.Other:Button({
+    Title = "清理游戏缓存",
+    Desc = "清理游戏临时文件和数据",
+    Callback = function()
+        WindUI:Notify({Title = "提示", Content = "清理缓存功能开发中...", Duration = 3})
+    end
+})
+
+WindUI:Notify({Title = "本熊汉化", Content = "界面加载完成！请选择需要的脚本。", Duration = 4})
