@@ -11,53 +11,56 @@ local loadstring = loadstring or load
 
 print("脚本开始执行...")
 
--- 改进的 HTTP 获取函数
+-- 在 httpGet 函数中添加详细诊断
 local function httpGet(url)
-    print("尝试HTTP请求: " .. url)
-    local success, result = pcall(function()
-        -- 方法1: 标准HttpGet
-        if game and game.HttpGet then
-            print("使用 game:HttpGet")
-            return game:HttpGet(url, true)
-        -- 方法2: Synapse
-        elseif syn and syn.request then
-            print("使用 syn.request")
-            local response = syn.request({
-                Url = url,
-                Method = "GET",
-                Timeout = 10
-            })
-            return response.Body
-        -- 方法3: KRNL/其他执行器
-        elseif request then
-            print("使用 request")
-            local response = request({
-                Url = url,
-                Method = "GET"
-            })
-            return response.Body
-        -- 方法4: Fluxus
-        elseif fluxus and fluxus.request then
-            print("使用 fluxus.request")
-            local response = fluxus.request({
-                Url = url,
-                Method = "GET"
-            })
-            return response.Body
+    print("详细诊断HTTP请求: " .. url)
+    
+    -- 测试基本的HTTP功能
+    local httpTestSuccess, httpTestResult = pcall(function()
+        -- 检查可用的HTTP方法
+        local availableMethods = {}
+        if game and game.HttpGet then table.insert(availableMethods, "game:HttpGet") end
+        if syn and syn.request then table.insert(availableMethods, "syn.request") end
+        if request then table.insert(availableMethods, "request") end
+        if fluxus and fluxus.request then table.insert(availableMethods, "fluxus.request") end
+        
+        print("可用的HTTP方法: " .. table.concat(availableMethods, ", "))
+        
+        if #availableMethods == 0 then
+            return nil, "没有可用的HTTP方法"
+        end
+        
+        -- 尝试实际请求
+        local success, result = pcall(function()
+            if game and game.HttpGet then
+                return game:HttpGet(url)
+            elseif syn and syn.request then
+                local response = syn.request({Url = url, Method = "GET", Timeout = 10})
+                return response.Body
+            elseif request then
+                local response = request({Url = url, Method = "GET"})
+                return response.Body
+            elseif fluxus and fluxus.request then
+                local response = fluxus.request({Url = url, Method = "GET"})
+                return response.Body
+            end
+        end)
+        
+        if success then
+            print("HTTP请求成功，响应长度: " .. (result and #result or 0))
+            return result
         else
-            print("没有可用的 HTTP 方法")
-            error("没有可用的 HTTP 方法")
+            return nil, "请求失败: " .. tostring(result)
         end
     end)
     
-    if success and result and #result > 100 then
-        print("HTTP请求成功，长度: " .. #result)
-        return result
+    if httpTestSuccess and httpTestResult then
+        return httpTestResult
     else
-        print("HTTP请求失败: " .. tostring(result))
+        print("HTTP诊断失败: " .. tostring(httpTestResult))
         return nil
     end
-end
+end 
 
 -- 简化的 WindUI 加载函数
 local function loadWindUISafely()
