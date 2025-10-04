@@ -1,12 +1,10 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 简化的汉化词典（测试用）
+-- 简化词典（只保留核心词汇）
 local translationDict = {
     -- ===== 基础对象 =====
     ["Player"] = "玩家",
@@ -1600,48 +1598,11 @@ local translationDict = {
     ["No chests found"] = "未找到宝箱"
 }
 
--- 自动去重函数
-local function removeDuplicates(dict)
-    local cleanDict = {}
-    local seen = {}
-    
-    for key, value in pairs(dict) do
-        if not seen[key] then
-            cleanDict[key] = value
-            seen[key] = true
-        else
-            warn("删除重复键: " .. key)
-        end
-    end
-    
-    return cleanDict
-end
-
--- 使用去重后的词典
-translationDict = removeDuplicates(translationDict)
-
--- 存储原始文本
 local originalTexts = {}
 local isTranslating = false
 local mainUI = nil
-local colorAnimationConnection = nil
 
--- 彩虹色序列
-local rainbowColors = {
-    Color3.fromRGB(255, 0, 0),      -- 红色
-    Color3.fromRGB(255, 127, 0),    -- 橙色
-    Color3.fromRGB(255, 255, 0),    -- 黄色
-    Color3.fromRGB(0, 255, 0),      -- 绿色
-    Color3.fromRGB(0, 0, 255),      -- 蓝色
-    Color3.fromRGB(75, 0, 130),     -- 靛蓝色
-    Color3.fromRGB(148, 0, 211)     -- 紫色
-}
-
-local currentColorIndex = 1
-local colorChangeSpeed = 1.5
-local lastColorChangeTime = 0
-
--- 安全的PCall包装函数
+-- 安全的执行函数
 local function safeCall(func, errorMessage)
     local success, result = pcall(func)
     if not success then
@@ -1651,134 +1612,81 @@ local function safeCall(func, errorMessage)
     return result
 end
 
--- 颜色动画函数
-local function startColorAnimation(uiElements)
-    if colorAnimationConnection then
-        colorAnimationConnection:Disconnect()
-        colorAnimationConnection = nil
-    end
-    
-    colorAnimationConnection = RunService.Heartbeat:Connect(function(deltaTime)
-        local currentTime = tick()
-        
-        if currentTime - lastColorChangeTime < colorChangeSpeed then
-            return
-        end
-        
-        lastColorChangeTime = currentTime
-        currentColorIndex = (currentColorIndex % #rainbowColors) + 1
-        local currentColor = rainbowColors[currentColorIndex]
-        
-        for _, element in pairs(uiElements) do
-            if element and element.Parent then
-                pcall(function()
-                    if element:IsA("Frame") or element:IsA("TextButton") then
-                        element.BackgroundColor3 = currentColor
-                    end
-                end)
-            end
-        end
-    end)
-end
-
--- 停止颜色动画
-local function stopColorAnimation()
-    if colorAnimationConnection then
-        colorAnimationConnection:Disconnect()
-        colorAnimationConnection = nil
-    end
-end
-
--- 创建彩色UI
-local function createColorfulUI()
+-- 创建简化UI
+local function createSimpleUI()
     return safeCall(function()
         local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "ColorfulTranslatorUI_MrPopCat14"
+        screenGui.Name = "SimpleTranslatorUI"
         screenGui.ResetOnSpawn = false
         screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
-        -- 主框架
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 280, 0, 200)
-        mainFrame.Position = UDim2.new(0, 20, 0, 20)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
+        mainFrame.Size = UDim2.new(0, 200, 0, 120)
+        mainFrame.Position = UDim2.new(0, 10, 0, 10)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         mainFrame.BorderSizePixel = 0
         mainFrame.Parent = screenGui
         
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 12)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = mainFrame
         
-        -- 标题
         local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, 0, 0, 45)
+        title.Size = UDim2.new(1, 0, 0, 30)
         title.Position = UDim2.new(0, 0, 0, 0)
-        title.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-        title.Text = "🌈 自动汉化系统 v2.0 🌈"
+        title.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+        title.Text = "汉化工具 v1.0"
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
         title.TextScaled = true
-        title.Font = Enum.Font.GothamBold
+        title.Font = Enum.Font.Gotham
         title.Parent = mainFrame
         
         local titleCorner = Instance.new("UICorner")
-        titleCorner.CornerRadius = UDim.new(0, 12)
+        titleCorner.CornerRadius = UDim.new(0, 8)
         titleCorner.Parent = title
         
-        -- 主按钮
         local toggleButton = Instance.new("TextButton")
-        toggleButton.Size = UDim2.new(0.85, 0, 0, 55)
-        toggleButton.Position = UDim2.new(0.075, 0, 0.25, 0)
+        toggleButton.Size = UDim2.new(0.8, 0, 0, 40)
+        toggleButton.Position = UDim2.new(0.1, 0, 0.3, 0)
         toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
-        toggleButton.Text = "🎯 开启汉化"
+        toggleButton.Text = "开启汉化"
         toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         toggleButton.TextScaled = true
-        toggleButton.Font = Enum.Font.GothamBold
+        toggleButton.Font = Enum.Font.Gotham
         toggleButton.Parent = mainFrame
         
         local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 10)
+        buttonCorner.CornerRadius = UDim.new(0, 6)
         buttonCorner.Parent = toggleButton
         
-        -- 状态显示
         local statusLabel = Instance.new("TextLabel")
-        statusLabel.Size = UDim2.new(0.85, 0, 0, 50)
-        statusLabel.Position = UDim2.new(0.075, 0, 0.6, 0)
-        statusLabel.BackgroundTransparency = 0.8
-        statusLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        statusLabel.Text = "✨ 状态: 等待启动 ✨"
+        statusLabel.Size = UDim2.new(0.8, 0, 0, 30)
+        statusLabel.Position = UDim2.new(0.1, 0, 0.7, 0)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.Text = "状态: 等待"
         statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         statusLabel.TextScaled = true
-        statusLabel.TextWrapped = true
         statusLabel.Font = Enum.Font.Gotham
         statusLabel.Parent = mainFrame
         
-        local statusCorner = Instance.new("UICorner")
-        statusCorner.CornerRadius = UDim.new(0, 8)
-        statusCorner.Parent = statusLabel
-        
-        -- 按钮点击事件
+        -- 按钮事件
         toggleButton.MouseButton1Click:Connect(function()
             isTranslating = not isTranslating
             
             if isTranslating then
-                toggleButton.Text = "🔴 关闭汉化"
-                statusLabel.Text = "🎨 状态: 汉化进行中... 🎨"
+                toggleButton.Text = "关闭汉化"
+                statusLabel.Text = "状态: 汉化中"
                 startTranslation()
             else
-                toggleButton.Text = "🎯 开启汉化"
-                statusLabel.Text = "✨ 状态: 汉化已关闭 ✨"
+                toggleButton.Text = "开启汉化"
+                statusLabel.Text = "状态: 已关闭"
                 restoreOriginalTexts()
             end
         end)
         
         screenGui.Parent = playerGui
-        
-        -- 开始颜色动画
-        local uiElements = {mainFrame, title, toggleButton}
-        startColorAnimation(uiElements)
-        
         return screenGui
-    end, "创建彩色UI失败")
+    end, "创建UI失败")
 end
 
 -- 翻译文本
@@ -1816,10 +1724,10 @@ local function processGUIObject(obj)
                 end
             end
         end
-    end, "处理GUI对象失败: " .. tostring(obj))
+    end, "处理GUI对象失败")
 end
 
--- 递归处理所有GUI对象
+-- 递归处理GUI
 local function processAllGUIObjects(parent)
     safeCall(function()
         for _, child in ipairs(parent:GetChildren()) do
@@ -1848,60 +1756,28 @@ end
 -- 开始翻译
 local function startTranslation()
     safeCall(function()
-        -- 处理现有GUI
         processAllGUIObjects(playerGui)
-        
-        -- 监听新创建的GUI对象
-        local connection
-        connection = playerGui.DescendantAdded:Connect(function(descendant)
-            if isTranslating then
-                processGUIObject(descendant)
-            else
-                connection:Disconnect()
-            end
-        end)
-    end, "启动翻译过程失败")
+    end, "启动翻译失败")
 end
 
--- 计算词典条目数
-local function getDictCount(dict)
-    local count = 0
-    for _ in pairs(dict) do
-        count = count + 1
-    end
-    return count
-end
-
--- 初始化系统
+-- 初始化
 local function initialize()
     safeCall(function()
-        -- 等待PlayerGui完全加载
         if not playerGui then
             playerGui = player:WaitForChild("PlayerGui")
         end
         
-        -- 创建彩色UI
-        mainUI = createColorfulUI()
+        mainUI = createSimpleUI()
         
         if mainUI then
-            print("🌈 彩色自动汉化系统加载成功！")
-            print("🎨 动态变色UI已显示在屏幕左上角")
-            print("🎯 点击按钮开启/关闭自动汉化")
-            print("📊 翻译词典条目数: " .. getDictCount(translationDict))
-            print("🎛️ 颜色变化速度: " .. colorChangeSpeed .. "秒/次")
+            print("汉化工具加载成功！")
+            print("翻译词典条目数: " .. #translationDict)
         else
-            warn("❌ 彩色自动汉化系统UI创建失败")
+            warn("汉化工具UI创建失败")
         end
-    end, "初始化系统失败")
+    end, "初始化失败")
 end
 
--- 延迟初始化
-local function delayedInitialize()
-    safeCall(function()
-        wait(3) -- 等待3秒确保游戏完全加载
-        initialize()
-    end, "延迟初始化失败")
-end
-
--- 启动系统
-delayedInitialize()
+-- 延迟启动
+wait(2)
+initialize()
