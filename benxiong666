@@ -1,232 +1,627 @@
------------------------------------------------------------
--- 增强版自定义文件保存脚本（带UI提示）
--- 特点：简洁的UI提示，显示保存状态和文件路径
------------------------------------------------------------
--- ================ 1. 基础服务与注入器兼容逻辑 ================
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- 注入器文件操作函数
-local readFunc, writeFunc, getPathFunc
-pcall(function()
-    if type(syn) == "table" then
-        readFunc = syn.readfile or readfile
-        writeFunc = syn.writefile or writefile
-        getPathFunc = syn.datapath
-    else
-        readFunc = readfile or readFile
-        writeFunc = writefile or writeFile
-        getPathFunc = function() return "Roblox/Scripts" end
-    end
-end)
+-- 将词典拆分成多个部分
+local translationDictParts = {
+    -- 第一部分：核心游戏对象
+    part1 = {
+        ["Player"] = "玩家",
+        ["NPC"] = "NPC",
+        ["Enemy"] = "敌人",
+        ["Boss"] = "首领",
+        ["Vehicle"] = "载具",
+        ["Pet"] = "宠物",
+        ["Building"] = "建筑",
+        ["Tree"] = "树木",
+        ["Big Tree"] = "大树",
+        ["Rock"] = "岩石",
+        ["Chest"] = "宝箱",
+        ["Loot"] = "战利品",
+        ["Resource"] = "资源",
+        ["Weapon"] = "武器",
+        ["Tool"] = "工具",
+        ["Item"] = "物品",
+        ["Child"] = "子对象",
+        ["Entity"] = "实体",
+        ["Map"] = "地图",
+        ["Structure"] = "结构",
+        ["Base"] = "基地",
+        ["House"] = "房子",
+        ["Shop"] = "商店",
+        ["Market"] = "市场",
+        ["Arena"] = "竞技场",
+        ["Dungeon"] = "地下城",
+        ["Cave"] = "洞穴",
+        ["Mountain"] = "山脉",
+        ["River"] = "河流",
+        ["Lake"] = "湖泊",
+        ["Ocean"] = "海洋",
+        ["Island"] = "岛屿",
+        ["Forest"] = "森林",
+        ["Desert"] = "沙漠",
+        ["Snow"] = "雪地",
+        ["Lava"] = "熔岩",
+        ["Sky"] = "天空",
+        ["Space"] = "太空",
+        ["Flower"] = "花朵",
+        ["Campfire"] = "营火",
+        ["Reward"] = "奖励",
+        ["Drop"] = "掉落",
+        ["Material"] = "材料",
+        ["Armor"] = "护甲",
+        ["Gadget"] = "小工具",
+        ["Monster"] = "怪物",
+        ["Creature"] = "生物",
+        ["Animal"] = "动物",
+        ["Model"] = "模型",
+        ["Mesh"] = "网格",
+        ["Part"] = "部件",
+        ["BasePart"] = "基础部件",
+        ["Warm Place"] = "温暖地点",
+        ["Camp"] = "营地",
+        ["Fishing Hut"] = "钓鱼小屋",
+    },
 
--- ================ 2. 【关键配置区】这里随便改！ ================
--- 自定义1：要创建的文件名
-local CUSTOM_FILE_NAME = "配置文件.lua"
+    -- 第二部分：游戏机制
+    part2 = {
+        ["Health"] = "生命值",
+        ["Stamina"] = "耐力",
+        ["Mana"] = "法力",
+        ["Experience"] = "经验",
+        ["Level"] = "等级",
+        ["Damage"] = "伤害",
+        ["Defense"] = "防御",
+        ["Critical"] = "暴击",
+        ["Dodge"] = "闪避",
+        ["Respawn"] = "重生",
+        ["Spawn"] = "生成",
+        ["Despawn"] = "消失",
+        ["Cooldown"] = "冷却",
+        ["Buff"] = "增益",
+        ["Debuff"] = "减益",
+        ["Status Effect"] = "状态效果",
+        ["Hitbox"] = "碰撞箱",
+        ["Physics"] = "物理",
+        ["Collision"] = "碰撞",
+        ["Skill"] = "技能",
+        ["Talent"] = "天赋",
+        ["Perk"] = "特权",
+        ["Attack"] = "攻击",
+        ["Power"] = "力量",
+        ["Strength"] = "力量",
+        ["Agility"] = "敏捷",
+        ["Intelligence"] = "智力",
+        ["Luck"] = "幸运",
+        ["Time"] = "时间",
+        ["Day"] = "白天",
+        ["Night"] = "夜晚",
+        ["Weather"] = "天气",
+        ["Season"] = "季节",
+        ["Temperature"] = "温度",
+        ["Hunger"] = "饥饿",
+        ["Thirst"] = "口渴",
+        ["Warmth"] = "温暖",
+        ["Fishing"] = "钓鱼",
+        ["Success Rate"] = "成功率",
+        ["Animation"] = "动画",
+        ["Effect"] = "效果",
+        ["Particle"] = "粒子",
+        ["Light"] = "光线",
+        ["Shadow"] = "阴影",
+        ["Texture"] = "纹理",
+        ["Sound"] = "声音",
+        ["Music"] = "音乐",
+    },
 
--- 自定义2：要保存的内容
-local CUSTOM_FILE_CONTENT = [[
--- 你的文件内容...
-return {
-    staticText = {
-        ["Hello"] = "你好",
-        ["World"] = "世界",
+    -- 第三部分：界面元素
+    part3 = {
+        ["Menu"] = "菜单",
+        ["Button"] = "按钮",
+        ["Slider"] = "滑块",
+        ["Toggle"] = "开关",
+        ["Dropdown"] = "下拉菜单",
+        ["Input"] = "输入框",
+        ["Checkbox"] = "复选框",
+        ["Keybind"] = "按键绑定",
+        ["Color Picker"] = "颜色选择器",
+        ["Tab"] = "标签页",
+        ["Window"] = "窗口",
+        ["Panel"] = "面板",
+        ["Notification"] = "通知",
+        ["Tooltip"] = "工具提示",
+        ["Watermark"] = "水印",
+        ["List"] = "列表",
+        ["Radio"] = "单选按钮",
+        ["Frame"] = "框架",
+        ["Label"] = "标签",
+        ["Text"] = "文本",
+        ["Image"] = "图像",
+        ["Icon"] = "图标",
+        ["Progress Bar"] = "进度条",
+        ["Scroll"] = "滚动",
+        ["Grid"] = "网格",
+        ["Layout"] = "布局",
+        ["Container"] = "容器",
+        ["Dialog"] = "对话框",
+        ["Popup"] = "弹出窗口",
+        ["Alert"] = "警报",
+        ["Message"] = "消息",
+        ["Chat"] = "聊天",
+        ["Inventory"] = "物品栏",
+        ["Equipment"] = "装备栏",
+        ["Skills"] = "技能栏",
+        ["Quests"] = "任务栏",
+        ["Minimap"] = "小地图",
+        ["Radar"] = "雷达",
+        ["Compass"] = "指南针",
+        ["HUD"] = "平视显示器",
+        ["UI"] = "用户界面",
+        ["GUI"] = "图形用户界面",
+        ["Submenu"] = "子菜单",
+        ["Context Menu"] = "上下文菜单",
+        ["Navigation"] = "导航",
+        ["Header"] = "头部",
+        ["Footer"] = "底部",
+        ["Sidebar"] = "侧边栏",
+        ["Main Content"] = "主要内容",
+    },
+
+    -- 第四部分：状态和核心功能
+    part4 = {
+        ["Enabled"] = "已启用",
+        ["Disabled"] = "已禁用",
+        ["Active"] = "活跃中",
+        ["Inactive"] = "未激活",
+        ["Loading"] = "加载中",
+        ["Processing"] = "处理中",
+        ["Connecting"] = "连接中",
+        ["Injecting"] = "注入中",
+        ["Bypassing"] = "绕过中",
+        ["Hooking"] = "挂钩中",
+        ["Patching"] = "修补中",
+        ["Scanning"] = "扫描中",
+        ["Executing"] = "执行中",
+        ["ON"] = "开",
+        ["OFF"] = "关",
+        ["Success"] = "成功",
+        ["Ready"] = "就绪",
+        ["Value"] = "数值",
+        ["Amount"] = "数量",
+        ["Error"] = "错误",
+        ["Failed"] = "失败",
+        ["Warning"] = "警告",
+        ["Connection Lost"] = "连接丢失",
+        ["Invalid Input"] = "无效输入",
+        ["Access Denied"] = "访问拒绝",
+        ["File Not Found"] = "文件未找到",
+        ["Memory Error"] = "内存错误",
+        ["Timeout"] = "超时",
+        ["Server Error"] = "服务器错误",
+        ["Script Error"] = "脚本错误",
+        ["Detection"] = "检测到",
+        ["Anti-Cheat"] = "反作弊",
+        ["Automation"] = "自动化",
+        ["Fun"] = "娱乐",
+        ["Information"] = "信息",
+        ["Visuals"] = "视觉效果",
+        ["Teleport"] = "传送",
+        ["Main"] = "主要",
+        ["Bring Stuff"] = "带来物品",
+        ["Player Options"] = "玩家选项",
+        ["World Options"] = "世界选项",
+        ["Game Options"] = "游戏选项",
+        ["Server Options"] = "服务器选项",
+        ["Network Options"] = "网络选项",
+        ["Graphics Options"] = "图形选项",
+        ["Audio Volume"] = "音频音量",
+    },
+
+    -- 第五部分：作弊和高级功能
+    part5 = {
+        ["Cheat"] = "作弊",
+        ["Hack"] = "黑客",
+        ["Exploit"] = "漏洞",
+        ["Script"] = "脚本",
+        ["Executor"] = "执行器",
+        ["Injector"] = "注入器",
+        ["Loader"] = "加载器",
+        ["God"] = "上帝",
+        ["Mode"] = "模式",
+        ["Infinite"] = "无限",
+        ["Money"] = "金钱",
+        ["Ammo"] = "弹药",
+        ["Unlimited"] = "无限",
+        ["Clip"] = "穿墙",
+        ["Fly"] = "飞行",
+        ["Speed"] = "速度",
+        ["Jump"] = "跳跃",
+        ["Movement"] = "移动",
+        ["Walk"] = "行走",
+        ["Run"] = "奔跑",
+        ["Options"] = "选项",
+        ["ESP"] = "透视",
+        ["Wallhack"] = "透视",
+        ["Aimbot"] = "自瞄",
+        ["Auto"] = "自动",
+        ["Aim"] = "瞄准",
+        ["Silent"] = "静默",
+        ["Triggerbot"] = "自动开枪",
+        ["Fire"] = "开火",
+        ["Game"] = "游戏",
+        ["Features"] = "功能",
+        ["Unlock"] = "解锁",
+        ["Instant"] = "立即",
+        ["Win"] = "获胜",
+        ["Farm"] = "刷资源",
+        ["Collect"] = "收集",
+        ["Complete"] = "完成",
+        ["Skip"] = "跳过",
+        ["Recoil"] = "后坐力",
+        ["Rapid"] = "快速",
+        ["Kill"] = "击杀",
+        ["Fullbright"] = "全亮",
+        ["X-Ray"] = "X光",
+        ["Night"] = "夜晚",
+        ["Vision"] = "视觉",
+        ["Fog"] = "雾",
+        ["Multiplier"] = "倍数",
+        ["Gravity"] = "重力",
+        ["Execute"] = "执行",
+        ["Inject"] = "注入",
+        ["Attach"] = "附加",
+        ["Load"] = "加载",
+        ["Save"] = "保存",
+        ["Refresh"] = "刷新",
+        ["Anti"] = "反",
+        ["AFK"] = "挂机",
+        ["Bypass"] = "绕过",
+        ["Safe"] = "安全",
+        ["Undetectable"] = "无法检测",
+        ["Stealth"] = "隐身",
+        ["Rob"] = "抢劫",
+        ["Grind"] = "刷级",
+        ["Train"] = "训练",
+        ["Sell"] = "出售",
+        ["Buy"] = "购买",
+        ["Advanced"] = "高级",
+        ["Premium"] = "高级",
+        ["VIP"] = "VIP",
+        ["Beta"] = "测试版",
+        ["Experimental"] = "实验性",
+        ["Developer"] = "开发者",
+        ["Debug"] = "调试",
+        ["Console"] = "控制台",
+        ["Command"] = "命令",
+        ["Interface"] = "界面",
+        ["Theme"] = "主题",
+        ["Color"] = "颜色",
+        ["Background"] = "背景",
+        ["Transparency"] = "透明度",
+        ["Style"] = "样式",
+        ["Config"] = "配置",
+        ["Settings"] = "设置",
+        ["Preferences"] = "偏好",
+        ["Customization"] = "自定义",
+        ["Profile"] = "资料",
+        ["Account"] = "账户",
+        ["Login"] = "登录",
+        ["Register"] = "注册",
+        ["Password"] = "密码",
+        ["Username"] = "用户名",
+        ["Email"] = "邮箱",
+        ["Verify"] = "验证",
+        ["Authenticate"] = "认证",
+        ["License"] = "许可证",
+        ["Key"] = "密钥",
+        ["Subscription"] = "订阅",
+        ["Payment"] = "支付",
+        ["Free"] = "免费",
+        ["Paid"] = "付费",
+        ["Trial"] = "试用",
+        ["Version"] = "版本",
+        ["Update"] = "更新",
+        ["Download"] = "下载",
+        ["Install"] = "安装",
+        ["Uninstall"] = "卸载",
+        ["Patch"] = "补丁",
+        ["Fix"] = "修复",
+        ["Bug"] = "漏洞",
+        ["Crash"] = "崩溃",
+        ["Lag"] = "延迟",
+        ["Ping"] = "ping值",
+        ["FPS"] = "帧率",
     }
 }
-]]
 
--- 自定义3：UI主题颜色（可修改）
-local UI_THEME_COLOR = Color3.fromRGB(0, 170, 255) -- 蓝色主题
+-- 翻译缓存
+local translationCache = {}
+local originalTexts = {}
+local isTranslating = false
+local mainUI = nil
+local connection = nil
 
--- ================ 3. UI提示系统 ================
-local function createNotification(message, isSuccess)
-    -- 创建提示框
-    local notification = Instance.new("Frame")
-    notification.Name = "FileSaveNotification"
-    notification.Size = UDim2.new(0, 300, 0, 80)
-    notification.Position = UDim2.new(0.5, -150, 0, -100)
-    notification.AnchorPoint = Vector2.new(0.5, 0)
-    notification.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    notification.BorderSizePixel = 0
-    notification.ZIndex = 100
-    
-    -- 圆角
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = notification
-    
-    -- 边框
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = isSuccess and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
-    stroke.Thickness = 2
-    stroke.Parent = notification
-    
-    -- 图标
-    local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.new(0, 32, 0, 32)
-    icon.Position = UDim2.new(0, 15, 0, 15)
-    icon.BackgroundTransparency = 1
-    icon.Image = isSuccess and "rbxassetid://10734948225" or "rbxassetid://10734948908" -- 成功/失败图标
-    icon.Parent = notification
-    
-    -- 标题
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -60, 0, 20)
-    title.Position = UDim2.new(0, 55, 0, 15)
-    title.BackgroundTransparency = 1
-    title.Text = isSuccess and "保存成功" or "保存失败"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextSize = 16
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = notification
-    
-    -- 消息内容
-    local messageLabel = Instance.new("TextLabel")
-    messageLabel.Size = UDim2.new(1, -60, 1, -40)
-    messageLabel.Position = UDim2.new(0, 55, 0, 35)
-    messageLabel.BackgroundTransparency = 1
-    messageLabel.Text = message
-    messageLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    messageLabel.TextSize = 14
-    messageLabel.Font = Enum.Font.Gotham
-    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
-    messageLabel.TextYAlignment = Enum.TextYAlignment.Top
-    messageLabel.TextWrapped = true
-    messageLabel.Parent = notification
-    
-    -- 进度条（用于显示自动关闭进度）
-    local progressBar = Instance.new("Frame")
-    progressBar.Size = UDim2.new(1, 0, 0, 3)
-    progressBar.Position = UDim2.new(0, 0, 1, -3)
-    progressBar.BackgroundColor3 = UI_THEME_COLOR
-    progressBar.BorderSizePixel = 0
-    progressBar.Parent = notification
-    
-    local progressCorner = Instance.new("UICorner")
-    progressCorner.CornerRadius = UDim.new(0, 2)
-    progressCorner.Parent = progressBar
-    
-    -- 添加到玩家GUI
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-    notification.Parent = playerGui
-    
-    -- 显示动画
-    notification.Position = UDim2.new(0.5, -150, 0, -100)
-    local tweenIn = TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0.5, -150, 0, 20)
-    })
-    tweenIn:Play()
-    
-    -- 5秒后自动关闭
-    local closeTime = 5
-    local startTime = tick()
-    
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        local elapsed = tick() - startTime
-        local progress = elapsed / closeTime
-        
-        -- 更新进度条
-        progressBar.Size = UDim2.new(1 - progress, 0, 0, 3)
-        
-        if elapsed >= closeTime then
-            connection:Disconnect()
-            -- 关闭动画
-            local tweenOut = TweenService:Create(notification, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                Position = UDim2.new(0.5, -150, 0, -100)
-            })
-            tweenOut:Play()
-            
-            -- 动画结束后销毁
-            tweenOut.Completed:Connect(function()
-                notification:Destroy()
-            end)
-        end
-    end)
-    
-    -- 点击关闭功能
-    notification.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            connection:Disconnect()
-            local tweenOut = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0.5, -150, 0, -100)
-            })
-            tweenOut:Play()
-            tweenOut.Completed:Connect(function()
-                notification:Destroy()
-            end)
-        end
-    end)
+-- 安全的执行函数
+local function safeCall(func, errorMessage)
+    local success, result = pcall(func)
+    if not success then
+        warn("[汉化工具] " .. errorMessage .. ": " .. tostring(result))
+        return nil
+    end
+    return result
 end
 
--- ================ 4. 核心工具函数 ================
-local function getFinalSavePath()
-    local basePath
-    if getPathFunc then
-        basePath = getPathFunc()
-    else
-        basePath = "C:/RobloxCustomFiles"
-        pcall(function()
-            if string.find(game:GetService("MarketplaceService"):GetProductInfo(1).Name, "Mac") then
-                basePath = "~/Library/RobloxCustomFiles"
+-- 优化的翻译函数（使用缓存和分批加载）
+local function translateText(text)
+    if type(text) ~= "string" or text == "" then
+        return text
+    end
+    
+    -- 检查缓存
+    if translationCache[text] then
+        return translationCache[text]
+    end
+    
+    local translated = text
+    
+    -- 按顺序在词典部分中查找翻译
+    for _, dictPart in pairs(translationDictParts) do
+        for eng, chn in pairs(dictPart) do
+            translated = string.gsub(translated, eng, chn)
+        end
+    end
+    
+    -- 缓存结果
+    translationCache[text] = translated
+    return translated
+end
+
+-- 存储原始文本
+local function storeOriginalText(object, property, value)
+    if not originalTexts[object] then
+        originalTexts[object] = {}
+    end
+    originalTexts[object][property] = value
+end
+
+-- 处理单个GUI对象
+local function processGUIObject(obj)
+    safeCall(function()
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            -- 只处理可见的对象
+            if obj:IsA("GuiObject") and not obj.Visible then
+                return
+            end
+            
+            local text = obj.Text
+            if text and text ~= "" then
+                local translated = translateText(text)
+                if translated ~= text then
+                    storeOriginalText(obj, "Text", text)
+                    obj.Text = translated
+                end
+            end
+        end
+    end, "处理GUI对象失败: " .. tostring(obj))
+end
+
+-- 只处理可见的GUI元素
+local function processVisibleGUIObjects(parent)
+    safeCall(function()
+        local visibleElements = {}
+        
+        -- 收集可见元素
+        local function collectVisibleElements(gui)
+            if gui:IsA("GuiObject") then
+                if gui.Visible then
+                    if gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox") then
+                        if gui.Text and gui.Text ~= "" then
+                            table.insert(visibleElements, gui)
+                        end
+                    end
+                end
+            end
+            
+            for _, child in ipairs(gui:GetChildren()) do
+                collectVisibleElements(child)
+            end
+        end
+        
+        collectVisibleElements(parent)
+        
+        -- 处理可见元素
+        for _, element in ipairs(visibleElements) do
+            processGUIObject(element)
+        end
+        
+        print("[汉化工具] 处理了 " .. #visibleElements .. " 个可见元素")
+    end, "处理可见GUI对象失败")
+end
+
+-- 恢复原始文本
+local function restoreOriginalTexts()
+    safeCall(function()
+        -- 确保连接被断开
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        
+        -- 恢复文本
+        for obj, properties in pairs(originalTexts) do
+            if obj and obj.Parent then
+                for property, value in pairs(properties) do
+                    pcall(function()
+                        obj[property] = value
+                    end)
+                end
+            end
+        end
+        
+        -- 清空缓存
+        originalTexts = {}
+        translationCache = {}
+        
+        print("[汉化工具] 已恢复所有文本，连接状态:", connection == nil and "已断开" or "仍连接")
+    end, "恢复原始文本失败")
+end
+
+-- 开始翻译（按需翻译）
+local function startTranslation()
+    safeCall(function()
+        -- 确保之前的连接被断开
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+        
+        -- 清空之前的记录
+        originalTexts = {}
+        translationCache = {}
+        
+        -- 只翻译当前可见的UI元素
+        processVisibleGUIObjects(playerGui)
+        
+        -- 监听新添加的可见对象
+        connection = playerGui.DescendantAdded:Connect(function(descendant)
+            if isTranslating then
+                -- 延迟处理，确保对象已完全加载
+                wait(0.1)
+                processGUIObject(descendant)
             end
         end)
-    end
-    local safeFileName = CUSTOM_FILE_NAME:gsub("[\\/:*?\"<>|]", "_")
-    return basePath .. "/" .. safeFileName
+        
+        print("[汉化工具] 翻译已启动，连接状态:", connection ~= nil)
+    end, "启动翻译失败")
 end
 
--- 增强的文件保存函数（带UI提示）
-local function enhancedSaveFile()
-    if not writeFunc then
-        createNotification("当前注入器不支持文件写入功能", false)
-        return
-    end
-
-    local savePath = getFinalSavePath()
-    local success, err = pcall(writeFunc, savePath, CUSTOM_FILE_CONTENT)
-    
-    if success then
-        createNotification("文件保存成功！\n路径: " .. savePath, true)
-        warn("配置文件保存成功: " .. savePath)
-    else
-        createNotification("文件保存失败: " .. tostring(err), false)
-        warn("配置文件保存失败: " .. tostring(err))
-    end
+-- 创建极简UI
+local function createSimpleUI()
+    return safeCall(function()
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "SimpleTranslatorUI"
+        screenGui.ResetOnSpawn = false
+        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Size = UDim2.new(0, 200, 0, 120)
+        mainFrame.Position = UDim2.new(0, 10, 0, 10)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Parent = screenGui
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = mainFrame
+        
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, 0, 0, 25)
+        title.Position = UDim2.new(0, 0, 0, 0)
+        title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        title.Text = "汉化工具 v2.0"
+        title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        title.TextScaled = true
+        title.Font = Enum.Font.Gotham
+        title.Parent = mainFrame
+        
+        local titleCorner = Instance.new("UICorner")
+        titleCorner.CornerRadius = UDim.new(0, 6)
+        titleCorner.Parent = title
+        
+        local toggleButton = Instance.new("TextButton")
+        toggleButton.Size = UDim2.new(0.8, 0, 0, 35)
+        toggleButton.Position = UDim2.new(0.1, 0, 0.25, 0)
+        toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+        toggleButton.Text = "开启汉化"
+        toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        toggleButton.TextScaled = true
+        toggleButton.Font = Enum.Font.Gotham
+        toggleButton.Parent = mainFrame
+        
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 6)
+        buttonCorner.Parent = toggleButton
+        
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Size = UDim2.new(0.8, 0, 0, 25)
+        statusLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.Text = "状态: 等待"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        statusLabel.TextScaled = true
+        statusLabel.Font = Enum.Font.Gotham
+        statusLabel.Parent = mainFrame
+        
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Size = UDim2.new(0.8, 0, 0, 20)
+        infoLabel.Position = UDim2.new(0.1, 0, 0.85, 0)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.Text = "按需翻译模式"
+        infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        infoLabel.TextScaled = true
+        infoLabel.Font = Enum.Font.Gotham
+        infoLabel.TextSize = 12
+        infoLabel.Parent = mainFrame
+        
+        -- 按钮事件
+        toggleButton.MouseButton1Click:Connect(function()
+            -- 防止快速连续点击
+            if toggleButton:GetAttribute("ClickCooldown") then
+                return
+            end
+            toggleButton:SetAttribute("ClickCooldown", true)
+            
+            isTranslating = not isTranslating
+            
+            if isTranslating then
+                toggleButton.Text = "关闭汉化"
+                toggleButton.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
+                statusLabel.Text = "状态: 汉化中"
+                startTranslation()
+            else
+                toggleButton.Text = "开启汉化"
+                toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+                statusLabel.Text = "状态: 已关闭"
+                restoreOriginalTexts()
+            end
+            
+            -- 0.5秒后解除点击冷却
+            delay(0.5, function()
+                toggleButton:SetAttribute("ClickCooldown", false)
+            end)
+        end)
+        
+        screenGui.Parent = playerGui
+        return screenGui
+    end, "创建UI失败")
 end
 
--- ================ 5. 启动入口 ================
-pcall(function()
-    -- 延迟一秒显示，确保游戏完全加载
-    wait(1)
-    enhancedSaveFile()
-end)
-
--- ================ 6. 可选：创建测试按钮（开发用） ================
-local function createTestButton()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "FileSaveTestUI"
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 200, 0, 50)
-    button.Position = UDim2.new(0, 20, 0, 20)
-    button.BackgroundColor3 = UI_THEME_COLOR
-    button.Text = "测试保存文件"
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 16
-    button.Font = Enum.Font.GothamBold
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = button
-    
-    button.MouseButton1Click:Connect(enhancedSaveFile)
-    button.Parent = screenGui
+-- 初始化
+local function initialize()
+    safeCall(function()
+        if not playerGui then
+            playerGui = player:WaitForChild("PlayerGui")
+        end
+        
+        mainUI = createSimpleUI()
+        
+        if mainUI then
+            print("[汉化工具] 加载成功！")
+            -- 计算词典条目数
+            local totalEntries = 0
+            for _, dictPart in pairs(translationDictParts) do
+                for _ in pairs(dictPart) do
+                    totalEntries = totalEntries + 1
+                end
+            end
+            print("[汉化工具] 词典分成 " .. #translationDictParts .. " 部分，共 " .. totalEntries .. " 个条目")
+        else
+            warn("[汉化工具] UI创建失败")
+        end
+    end, "初始化失败")
 end
 
--- 取消下面这行的注释来显示测试按钮（开发时使用）
--- createTestButton()
+-- 分步延迟启动
+wait(2) -- 等待2秒让游戏稳定
+print("[汉化工具] 开始初始化优化版汉化工具...")
+initialize()
