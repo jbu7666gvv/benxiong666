@@ -77,11 +77,26 @@ function ColorSystem:getErrorColor()
     return self:getDynamicColor(0.8)
 end
 
+-- 获取文字颜色序列
+function ColorSystem:getTextColorSequence(text)
+    local colorSequence = {}
+    local length = #text
+    
+    for i = 1, length do
+        local offset = (i - 1) * 0.3
+        local color = self:getDynamicColor(offset)
+        table.insert(colorSequence, ColorSequenceKeypoint.new((i-1)/length, color))
+        table.insert(colorSequence, ColorSequenceKeypoint.new(i/length, color))
+    end
+    
+    return ColorSequence.new(colorSequence)
+end
+
 -- 启动颜色动画循环
 task_spawn(function()
     while ColorSystem.running do
         ColorSystem.hue = (ColorSystem.hue + 1) % 360
-        task_wait(0.05) -- 控制颜色变化速度
+        task_wait(0.05)
     end
 end)
 
@@ -119,66 +134,19 @@ local function safeSetClipboard(text)
     return success
 end
 
--- 动态颜色函数定义
-function gradient(text, startColor, endColor)
-    local result = {}
-    local length = #text
-    
-    for i = 1, length do
-        local t = (i - 1) / math.max(length - 1, 1)
-        local r = math.floor((startColor.R + (endColor.R - startColor.R) * t) * 255)
-        local g = math.floor((startColor.G + (endColor.G - startColor.G) * t) * 255)
-        local b = math.floor((startColor.B + (endColor.B - startColor.B) * t) * 255)
-        
-        table.insert(result, string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i)))
-    end
-    
-    return table.concat(result)
-end
-
--- 动态渐变文本
-function dynamicGradient(text)
-    local result = {}
-    local length = #text
-    
-    for i = 1, length do
-        local offset = (i - 1) * 0.1
-        local color = ColorSystem:getDynamicColor(offset)
-        local r = math.floor(color.R * 255)
-        local g = math.floor(color.G * 255)
-        local b = math.floor(color.B * 255)
-        
-        table.insert(result, string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i)))
-    end
-    
-    return table.concat(result)
-end
-
--- 彩色文本函数 - 每个字符随机颜色
+-- 简单的彩色文本函数（不使用HTML）
 function rainbowText(text)
-    local result = {}
-    local length = #text
-    
-    for i = 1, length do
-        local offset = (i - 1) * 0.3
-        local color = ColorSystem:getDynamicColor(offset)
-        local r = math.floor(color.R * 255)
-        local g = math.floor(color.G * 255)
-        local b = math.floor(color.B * 255)
-        
-        table.insert(result, string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, text:sub(i, i)))
-    end
-    
-    return table.concat(result)
+    -- 直接返回原文本，颜色通过其他方式设置
+    return text
 end
 
--- 图标常量（修正后的文本图标）
-local KEY_ICON = rainbowText(" [KEY]")
-local CHECK_ICON = rainbowText(" [CHECK]")
-local LOCK_ICON = rainbowText(" [LOCK]")
-local UNLOCK_ICON = rainbowText(" [UNLOCK]")
-local STAR_ICON = rainbowText(" [STAR]")
-local INFO_ICON = rainbowText(" [INFO]")
+-- 图标常量
+local KEY_ICON = " [KEY]"
+local CHECK_ICON = " [CHECK]"
+local LOCK_ICON = " [LOCK]"
+local UNLOCK_ICON = " [UNLOCK]"
+local STAR_ICON = " [STAR]"
+local INFO_ICON = " [INFO]"
 
 -- 安全调用函数
 local function safeCall(func, errorMessage)
@@ -186,8 +154,8 @@ local function safeCall(func, errorMessage)
     if not success then
         if WindUI then
             WindUI:Notify({
-                Title = rainbowText("错误"), 
-                Content = rainbowText(errorMessage .. ": " .. tostring(err)), 
+                Title = "错误", 
+                Content = errorMessage .. ": " .. tostring(err), 
                 Duration = 5,
                 Color = ColorSystem:getErrorColor()
             })
@@ -213,8 +181,8 @@ end
 
 local function loadScript(url, scriptName)
     WindUI:Notify({
-        Title = rainbowText("提示"), 
-        Content = rainbowText("正在加载 " .. scriptName .. "..."), 
+        Title = "提示", 
+        Content = "正在加载 " .. scriptName .. "...", 
         Duration = 2,
         Color = ColorSystem:getDynamicColor(0.3)
     })
@@ -240,16 +208,16 @@ local function loadScript(url, scriptName)
     
     if success and result then
         WindUI:Notify({
-            Title = rainbowText("成功"), 
-            Content = rainbowText(scriptName .. " 加载完成"), 
+            Title = "成功", 
+            Content = scriptName .. " 加载完成", 
             Duration = 3,
             Color = ColorSystem:getSuccessColor()
         })
     else
         local errorMsg = success and result or "网络请求失败"
         WindUI:Notify({
-            Title = rainbowText("错误"), 
-            Content = rainbowText(scriptName .. " 加载失败: " .. errorMsg), 
+            Title = "错误", 
+            Content = scriptName .. " 加载失败: " .. errorMsg, 
             Duration = 5,
             Color = ColorSystem:getErrorColor()
         })
@@ -259,19 +227,18 @@ end
 local Confirmed = false
 
 -- 创建欢迎弹窗
-local welcomeColor1, welcomeColor2 = ColorSystem:getGradientColors()
 WindUI:Popup({
-    Title = rainbowText("欢迎使用本熊汉化"),
+    Title = "欢迎使用本熊汉化",
     Icon = "rbxassetid://112682688917044",
     IconThemed = true,
-    Content = rainbowText("本熊汉化 1.5.1"),
+    Content = "本熊汉化 1.5.1",
     Buttons = {
         {
-            Title = rainbowText("退出"),
+            Title = "退出",
             Callback = function() 
                 WindUI:Notify({
-                    Title = rainbowText("提示"), 
-                    Content = rainbowText("已退出"), 
+                    Title = "提示", 
+                    Content = "已退出", 
                     Duration = 2,
                     Color = ColorSystem:getDynamicColor(0.6)
                 })
@@ -279,13 +246,13 @@ WindUI:Popup({
             Variant = "Secondary",
         },
         {
-            Title = rainbowText("使用"),
+            Title = "使用",
             Icon = "arrow-right",
             Callback = function() 
                 Confirmed = true 
                 WindUI:Notify({
-                    Title = rainbowText("欢迎"), 
-                    Content = rainbowText("开始使用本熊汉化"), 
+                    Title = "欢迎", 
+                    Content = "开始使用本熊汉化", 
                     Duration = 2,
                     Color = ColorSystem:getSuccessColor()
                 })
@@ -299,11 +266,11 @@ repeat task_wait() until Confirmed
 
 -- 创建主窗口
 local Window = WindUI:CreateWindow({
-    Title = rainbowText("本熊汉化 1.5.1"),
+    Title = "本熊汉化 1.5.1",
     Icon = "rbxassetid://129260712070622",
     IconThemed = true,
-    Author = rainbowText("本熊汉化 1.5.1"),
-    Folder = rainbowText("本熊汉化 1.5.1"),
+    Author = "本熊汉化 1.5.1",
+    Folder = "本熊汉化 1.5.1",
     Size = UDim2.fromOffset(600, 500),
     Transparent = true,
     Theme = "Dark",
@@ -312,15 +279,15 @@ local Window = WindUI:CreateWindow({
         Callback = function() 
             if safeSetClipboard("本熊汉化 1.5.1") then
                 WindUI:Notify({
-                    Title = rainbowText("提示"), 
-                    Content = rainbowText("已复制作者信息"), 
+                    Title = "提示", 
+                    Content = "已复制作者信息", 
                     Duration = 2,
                     Color = ColorSystem:getDynamicColor(0.2)
                 })
             else
                 WindUI:Notify({
-                    Title = rainbowText("错误"), 
-                    Content = rainbowText("剪贴板复制失败"), 
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
                     Duration = 2,
                     Color = ColorSystem:getErrorColor()
                 })
@@ -333,7 +300,7 @@ local Window = WindUI:CreateWindow({
     -- 动态密钥系统配置
     KeySystem = {
         Key = { "秋容" },
-        Note = rainbowText("谁没目还爱圈钱？"),
+        Note = "谁没目还爱圈钱？",
         URL = "秋容", 
         SaveKey = true,
         Theme = "Modern",
@@ -342,27 +309,22 @@ local Window = WindUI:CreateWindow({
             Color1 = ColorSystem:getDynamicColor(0.1),
             Color2 = ColorSystem:getDynamicColor(0.6)
         },
-        InputPlaceholder = rainbowText("请输入密钥..."),
-        ButtonText = rainbowText("验证密钥"),
-        SuccessMessage = rainbowText("密钥验证成功！欢迎使用本熊汉化"),
-        ErrorMessage = rainbowText("密钥无效，请重试"),
+        InputPlaceholder = "请输入密钥...",
+        ButtonText = "验证密钥",
+        SuccessMessage = "密钥验证成功！欢迎使用本熊汉化",
+        ErrorMessage = "密钥无效，请重试",
         ShowHint = true,
-        HintText = rainbowText("谁没目还爱圈钱？")
+        HintText = "谁没目还爱圈钱？"
     }
 })
 
 -- 动态更新UI颜色
 task_spawn(function()
     while ColorSystem.running and Window do
-        -- 更新窗口标题
-        Window:EditWindow({
-            Title = rainbowText("本熊汉化 1.5.1")
-        })
-        
         -- 更新打开按钮颜色
         local btnColor1, btnColor2 = ColorSystem:getButtonColors()
         Window:EditOpenButton({
-            Title = rainbowText("本熊汉化 1.5.1"),
+            Title = "本熊汉化 1.5.1",
             Icon = "monitor",
             CornerRadius = UDim.new(0, 16),
             StrokeThickness = 2,
@@ -370,16 +332,16 @@ task_spawn(function()
             Draggable = true,
         })
         
-        task_wait(0.5) -- 控制更新频率
+        task_wait(0.5)
     end
 end)
 
 -- 创建全屏按钮
-Window:CreateTopbarButton(rainbowText("全屏"), "battery-plus", function() 
+Window:CreateTopbarButton("全屏", "battery-plus", function() 
     Window:ToggleFullscreen()
     WindUI:Notify({
-        Title = rainbowText("提示"), 
-        Content = rainbowText("切换全屏模式"), 
+        Title = "提示", 
+        Content = "切换全屏模式", 
         Duration = 2,
         Color = ColorSystem:getDynamicColor(0.4)
     })
@@ -387,15 +349,15 @@ end, 989)
 
 -- 创建标签页
 local Tabs = {
-    Home = Window:Tab({ Title = rainbowText("主页"), Icon = "home" }),
-    KeyManager = Window:Tab({ Title = rainbowText("密钥管理"), Icon = "key" }),
-    AutoTranslate = Window:Tab({ Title = rainbowText("自动汉化"), Icon = "languages" }),
-    Main = Window:Tab({ Title = rainbowText("99夜"), Icon = "zap" }),
-    Ninja = Window:Tab({ Title = rainbowText("死铁轨"), Icon = "user" }),
-    Oth = Window:Tab({ Title = rainbowText("偷走脑红"), Icon = "heart" }),
-    General = Window:Tab({ Title = rainbowText("通用"), Icon = "settings" }),
-    FlyAndTeleport = Window:Tab({ Title = rainbowText("甩飞与传送"), Icon = "rocket" }),
-    Other = Window:Tab({ Title = rainbowText("工具"), Icon = "tool" })
+    Home = Window:Tab({ Title = "主页", Icon = "home" }),
+    KeyManager = Window:Tab({ Title = "密钥管理", Icon = "key" }),
+    AutoTranslate = Window:Tab({ Title = "自动汉化", Icon = "languages" }),
+    Main = Window:Tab({ Title = "99夜", Icon = "zap" }),
+    Ninja = Window:Tab({ Title = "死铁轨", Icon = "user" }),
+    Oth = Window:Tab({ Title = "偷走脑红", Icon = "heart" }),
+    General = Window:Tab({ Title = "通用", Icon = "settings" }),
+    FlyAndTeleport = Window:Tab({ Title = "甩飞与传送", Icon = "rocket" }),
+    Other = Window:Tab({ Title = "工具", Icon = "tool" })
 }
 
 -- 默认选择主页
@@ -403,31 +365,31 @@ Window:SelectTab(1)
 
 -- 主页内容
 Tabs.Home:Paragraph({
-    Title = rainbowText("欢迎使用本熊汉化"),
-    Desc = rainbowText("为Roblox脚本提供汉化 - 现在带有动态彩虹效果！"),
+    Title = "欢迎使用本熊汉化",
+    Desc = "为Roblox脚本提供汉化 - 现在带有动态彩虹效果！",
 })
 
 Tabs.Home:Paragraph({
-    Title = rainbowText("更新内容"),
-    Desc = rainbowText("我懒得写，自己看"),
+    Title = "更新内容",
+    Desc = "我懒得写，自己看",
 })
 
-Tabs.Home:Section({Title = rainbowText("信息")})
+Tabs.Home:Section({Title = "信息"})
 
 Tabs.Home:Button({
-    Title = rainbowText("复制QQ群号"),
+    Title = "复制QQ群号",
     Callback = function()
         if safeSetClipboard("168985587") then
             WindUI:Notify({
-                Title = rainbowText("成功"), 
-                Content = rainbowText("QQ群号已复制到剪贴板"), 
+                Title = "成功", 
+                Content = "QQ群号已复制到剪贴板", 
                 Duration = 3,
                 Color = ColorSystem:getSuccessColor()
             })
         else
             WindUI:Notify({
-                Title = rainbowText("错误"), 
-                Content = rainbowText("剪贴板复制失败"), 
+                Title = "错误", 
+                Content = "剪贴板复制失败", 
                 Duration = 3,
                 Color = ColorSystem:getErrorColor()
             })
@@ -436,19 +398,19 @@ Tabs.Home:Button({
 })
 
 Tabs.Home:Button({
-    Title = rainbowText("复制快手号"),
+    Title = "复制快手号",
     Callback = function()
         if safeSetClipboard("lousun7891") then
             WindUI:Notify({
-                Title = rainbowText("成功"), 
-                Content = rainbowText("快手号已复制到剪贴板"), 
+                Title = "成功", 
+                Content = "快手号已复制到剪贴板", 
                 Duration = 3,
                 Color = ColorSystem:getSuccessColor()
             })
         else
             WindUI:Notify({
-                Title = rainbowText("错误"), 
-                Content = rainbowText("剪贴板复制失败"), 
+                Title = "错误", 
+                Content = "剪贴板复制失败", 
                 Duration = 3,
                 Color = ColorSystem:getErrorColor()
             })
@@ -457,10 +419,10 @@ Tabs.Home:Button({
 })
 
 -- 通用功能标签页
-Tabs.General:Section({Title = rainbowText("通用功能")})
+Tabs.General:Section({Title = "通用功能"})
 
 Tabs.General:Slider({
-    Title = rainbowText("速度"),
+    Title = "速度",
     Default = 16,
     Minimum = 16,
     Maximum = 200,
@@ -470,7 +432,7 @@ Tabs.General:Slider({
 })
 
 Tabs.General:Slider({
-    Title = rainbowText("跳跃高度"),
+    Title = "跳跃高度",
     Default = 50,
     Minimum = 50,
     Maximum = 200,
@@ -479,10 +441,10 @@ Tabs.General:Slider({
     end
 })
 
-Tabs.General:Section({Title = rainbowText("通用功能")})
+Tabs.General:Section({Title = "通用功能"})
 
 Tabs.General:Toggle({
-    Title = rainbowText("夜视"),
+    Title = "夜视",
     Default = false,
     Callback = function(value)
         if value then
@@ -494,65 +456,65 @@ Tabs.General:Toggle({
 })
 
 Tabs.General:Button({
-    Title = rainbowText("速度更改"),
+    Title = "速度更改",
     Callback = function()
         loadstring(game:HttpGet("https://pastebin.com/raw/Zuw5T7DP",true))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("死亡笔记"),
+    Title = "死亡笔记",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0%20(1).txt"))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("踏空"),
+    Title = "踏空",
     Callback = function()
         loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("无限跳"),
+    Title = "无限跳",
     Callback = function()
         loadstring(game:HttpGet("https://pastebin.com/raw/V5PQy3y0", true))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("显示FPS"),
+    Title = "显示FPS",
     Callback = function()
         loadstring(game:HttpGet("https://pastefy.app/d9j82YJr/raw",true))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("玩家进入提示"),
+    Title = "玩家进入提示",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/boyscp/scriscriptsc/main/bbn.lua"))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("电脑键盘"),
+    Title = "电脑键盘",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
     end
 })
 
-Tabs.General:Section({Title = rainbowText("光影与画质")})
+Tabs.General:Section({Title = "光影与画质"})
 
 Tabs.General:Button({
-    Title = rainbowText("光影"),
+    Title = "光影",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/MZEEN2424/Graphics/main/Graphics.xml"))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("光影2"),
+    Title = "光影2",
     Callback = function()
         -- Roblox Graphics Enhancher
         local light = game.Lighting
@@ -684,98 +646,98 @@ Tabs.General:Button({
 })
 
 Tabs.General:Button({
-    Title = rainbowText("画质"),
+    Title = "画质",
     Callback = function()
         loadstring(game:HttpGet("https://pastebin.com/raw/jHBfJYmS"))()
     end
 })
 
-Tabs.General:Section({Title = rainbowText("18禁用")})
+Tabs.General:Section({Title = "18禁用"})
 
 Tabs.General:Button({
-    Title = rainbowText("撸管R6"),
+    Title = "撸管R6",
     Callback = function()
         loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("撸管R15"),
+    Title = "撸管R15",
     Callback = function()
         loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
     end
 })
 
-Tabs.General:Section({Title = rainbowText("飞行区")})
+Tabs.General:Section({Title = "飞行区"})
 
 Tabs.General:Button({
-    Title = rainbowText("飞行"),
+    Title = "飞行",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("飞车"),
+    Title = "飞车",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/vb/main/%E9%A3%9E%E8%BD%A6.lua"))()
     end
 })
 
-Tabs.General:Section({Title = rainbowText("甩飞区")})
+Tabs.General:Section({Title = "甩飞区"})
 
 Tabs.General:Button({
-    Title = rainbowText("铁拳"),
+    Title = "铁拳",
     Callback = function()
         loadstring(game:HttpGet('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("旋转甩飞"),
+    Title = "旋转甩飞",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%97%8B%E8%BD%AC.lua"))()
     end
 })
 
 Tabs.General:Button({
-    Title = rainbowText("碰到就飞"),
+    Title = "碰到就飞",
     Callback = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe./main/Fling%20GUI"))()
     end
 })
 
 -- 甩飞与传送标签页
-Tabs.FlyAndTeleport:Section({Title = rainbowText("甩飞功能")})
+Tabs.FlyAndTeleport:Section({Title = "甩飞功能"})
 
 Tabs.FlyAndTeleport:Button({
-    Title = rainbowText("指定甩飞(简易版)"),
+    Title = "指定甩飞(简易版)",
     Callback = function()
         loadstring(game:HttpGet(('https://pastefy.app/9SmQXduA/raw'),true))()
     end
 })
 
 Tabs.FlyAndTeleport:Button({
-    Title = rainbowText("全图甩飞"),
+    Title = "全图甩飞",
     Callback = function()
         loadstring(game:HttpGet("https://pastebin.com/raw/zqyDSUWX"))()
     end
 })
 
 -- 密钥管理页面
-Tabs.KeyManager:Section({Title = rainbowText(LOCK_ICON .. " 密钥状态")})
+Tabs.KeyManager:Section({Title = LOCK_ICON .. " 密钥状态"})
 
 Tabs.KeyManager:Paragraph({
-    Title = rainbowText("密钥信息"),
-    Desc = rainbowText("当前密钥系统已启用，支持自动保存和验证 - 动态彩虹效果运行中")
+    Title = "密钥信息",
+    Desc = "当前密钥系统已启用，支持自动保存和验证 - 动态彩虹效果运行中"
 })
 
 Tabs.KeyManager:Button({
-    Title = rainbowText("重新验证密钥"),
+    Title = "重新验证密钥",
     Callback = function()
         WindUI:Notify({
-            Title = rainbowText("密钥验证"), 
-            Content = rainbowText("正在重新验证密钥..."), 
+            Title = "密钥验证", 
+            Content = "正在重新验证密钥...", 
             Duration = 2,
             Color = ColorSystem:getDynamicColor(0.3)
         })
@@ -783,22 +745,22 @@ Tabs.KeyManager:Button({
 })
 
 Tabs.KeyManager:Button({
-    Title = rainbowText("清除已保存密钥"),
+    Title = "清除已保存密钥",
     Callback = function()
         WindUI:Notify({
-            Title = rainbowText("提示"), 
-            Content = rainbowText("已清除本地保存的密钥"), 
+            Title = "提示", 
+            Content = "已清除本地保存的密钥", 
             Duration = 3,
             Color = ColorSystem:getDynamicColor(0.7)
         })
     end
 })
 
-Tabs.KeyManager:Section({Title = rainbowText(INFO_ICON .. " 密钥说明")})
+Tabs.KeyManager:Section({Title = INFO_ICON .. " 密钥说明"})
 
 Tabs.KeyManager:Paragraph({
-    Title = rainbowText("使用说明"),
-    Desc = rainbowText("• 密钥用于验证用户身份\n• 支持自动保存功能\n• 验证成功后无需重复输入\n• 动态彩虹效果持续运行")
+    Title = "使用说明",
+    Desc = "• 密钥用于验证用户身份\n• 支持自动保存功能\n• 验证成功后无需重复输入\n• 动态彩虹效果持续运行"
 })
 
 -- 自动汉化脚本定义
@@ -811,12 +773,12 @@ local autoTranslateScripts = {
     }
 }
 
-Tabs.AutoTranslate:Section({Title = rainbowText("自动汉化")})
+Tabs.AutoTranslate:Section({Title = "自动汉化"})
 
 for i, scriptInfo in ipairs(autoTranslateScripts) do
     Tabs.AutoTranslate:Button({
-        Title = rainbowText(scriptInfo.Title .. (scriptInfo.RequiresKey and KEY_ICON or CHECK_ICON)),
-        Desc = rainbowText(scriptInfo.Desc),
+        Title = scriptInfo.Title .. (scriptInfo.RequiresKey and KEY_ICON or CHECK_ICON),
+        Desc = scriptInfo.Desc,
         Callback = function()
             loadScript(scriptInfo.URL, scriptInfo.Title)
         end
@@ -857,37 +819,37 @@ local mainScripts = {
     }
 }
 
-Tabs.Main:Section({Title = rainbowText("99夜")})
+Tabs.Main:Section({Title = "99夜"})
 
 for i, scriptInfo in ipairs(mainScripts) do
     Tabs.Main:Button({
-        Title = rainbowText(scriptInfo.Title),
-        Desc = rainbowText(scriptInfo.Desc),
+        Title = scriptInfo.Title,
+        Desc = scriptInfo.Desc,
         Callback = function()
             loadScript(scriptInfo.URL, scriptInfo.Title)
         end
     })
 end
 
-Tabs.Ninja:Section({Title = rainbowText("死铁轨")})
+Tabs.Ninja:Section({Title = "死铁轨"})
 
 Tabs.Ninja:Button({
-    Title = rainbowText("RINGTA (无卡密)" .. UNLOCK_ICON),
-    Desc = rainbowText("汉化"),
+    Title = "RINGTA (无卡密)" .. UNLOCK_ICON,
+    Desc = "汉化",
     Callback = function()
         loadScript("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi", "RINGTA脚本")
     end
 })
 
-Tabs.Oth:Section({Title = rainbowText("偷走脑红")})
+Tabs.Oth:Section({Title = "偷走脑红"})
 
 Tabs.Oth:Button({
-    Title = rainbowText("MIRANDA HUB (无卡密)" .. UNLOCK_ICON),
-    Desc = rainbowText("汉化"),
+    Title = "MIRANDA HUB (无卡密)" .. UNLOCK_ICON,
+    Desc = "汉化",
     Callback = function()
         WindUI:Notify({
-            Title = rainbowText("提示"), 
-            Content = rainbowText("正在加载脚本..."), 
+            Title = "提示", 
+            Content = "正在加载脚本...", 
             Duration = 2,
             Color = ColorSystem:getDynamicColor(0.3)
         })
@@ -896,14 +858,14 @@ Tabs.Oth:Button({
 })
 
 -- 工具页面
-Tabs.Other:Section({Title = rainbowText("系统工具")})
+Tabs.Other:Section({Title = "系统工具"})
 
 Tabs.Other:Button({
-    Title = rainbowText("重新加载界面"),
+    Title = "重新加载界面",
     Callback = function()
         WindUI:Notify({
-            Title = rainbowText("提示"), 
-            Content = rainbowText("重新加载界面中..."), 
+            Title = "提示", 
+            Content = "重新加载界面中...", 
             Duration = 2,
             Color = ColorSystem:getDynamicColor(0.5)
         })
@@ -956,8 +918,8 @@ Tabs.Other:Button({
         if not success then
             -- 方法2：简单的重新初始化
             WindUI:Notify({
-                Title = rainbowText("错误"), 
-                Content = rainbowText("完全重启失败，请手动重新执行脚本"), 
+                Title = "错误", 
+                Content = "完全重启失败，请手动重新执行脚本", 
                 Duration = 5,
                 Color = ColorSystem:getErrorColor()
             })
@@ -966,30 +928,30 @@ Tabs.Other:Button({
 })
 
 Tabs.Other:Button({
-    Title = rainbowText("清理缓存"),
+    Title = "清理缓存",
     Callback = function()
         collectgarbage("collect")
         WindUI:Notify({
-            Title = rainbowText("成功"), 
-            Content = rainbowText("系统缓存已清理"), 
+            Title = "成功", 
+            Content = "系统缓存已清理", 
             Duration = 3,
             Color = ColorSystem:getSuccessColor()
         })
     end
 })
 
-Tabs.Other:Section({Title = rainbowText("颜色控制")})
+Tabs.Other:Section({Title = "颜色控制"})
 
 Tabs.Other:Slider({
-    Title = rainbowText("颜色变化速度"),
+    Title = "颜色变化速度",
     Default = 1,
     Minimum = 0.1,
     Maximum = 5,
     Callback = function(value)
         ColorSystem.speed = value
         WindUI:Notify({
-            Title = rainbowText("提示"), 
-            Content = rainbowText(string.format("颜色速度设置为: %.1f", value)), 
+            Title = "提示", 
+            Content = string.format("颜色速度设置为: %.1f", value), 
             Duration = 2,
             Color = ColorSystem:getDynamicColor(0.2)
         })
@@ -998,8 +960,8 @@ Tabs.Other:Slider({
 
 -- 完成通知
 WindUI:Notify({
-    Title = rainbowText("本熊汉化 - 彩虹动态版"), 
-    Content = rainbowText("界面加载完成！享受动态彩虹效果！"), 
+    Title = "本熊汉化 - 彩虹动态版", 
+    Content = "界面加载完成！享受动态彩虹效果！", 
     Duration = 4,
     Color = ColorSystem:getSuccessColor()
 })
