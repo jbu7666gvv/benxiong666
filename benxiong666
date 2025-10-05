@@ -306,7 +306,6 @@ Tabs.Home:Button({
 -- 通用功能标签页
 Tabs.General:Section({Title = "通用功能"})
 
--- 修复速度滑动按钮
 Tabs.General:Slider({
     Title = "速度",
     Default = 16,
@@ -314,8 +313,19 @@ Tabs.General:Slider({
     Maximum = 200,
     Callback = function(value)
         local character = game.Players.LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = value
+        if character then
+            -- 等待Humanoid加载
+            local humanoid = character:WaitForChild("Humanoid")
+            humanoid.WalkSpeed = value
+            
+            -- 添加持续监控，防止被重置
+            spawn(function()
+                while task.wait(1) do
+                    if humanoid and humanoid.WalkSpeed ~= value then
+                        humanoid.WalkSpeed = value
+                    end
+                end
+            end)
         end
     end
 })
@@ -327,8 +337,17 @@ Tabs.General:Slider({
     Maximum = 200,
     Callback = function(value)
         local character = game.Players.LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.JumpPower = value
+        if character then
+            local humanoid = character:WaitForChild("Humanoid")
+            humanoid.JumpPower = value
+            
+            spawn(function()
+                while task.wait(1) do
+                    if humanoid and humanoid.JumpPower ~= value then
+                        humanoid.JumpPower = value
+                    end
+                end
+            end)
         end
     end
 })
