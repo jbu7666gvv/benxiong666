@@ -2,7 +2,24 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- 将词典拆分成多个部分
+print("[汉化工具] 基础服务加载完成 - PlayerGui: " .. tostring(playerGui))
+
+-- 调试工具函数
+local function countTable(t)
+    local count = 0
+    for _ in pairs(t) do
+        count = count + 1
+    end
+    return count
+end
+
+local function getMemoryUsage()
+    return math.floor(collectgarbage("count") / 1024) .. "MB"
+end
+
+print("[汉化工具] 跳过大型词典生成，使用精简核心词典")
+
+-- 只使用核心精简词典（避免内存和性能问题）
 local translationDictParts = {
     -- 第一部分：核心游戏对象
     part1 = {
@@ -334,12 +351,17 @@ local translationDictParts = {
     }
 }
 
+print("[汉化工具] 核心词典加载完成，包含 " .. countTable(coreTranslationDict) .. " 个词条")
+
 -- 翻译缓存
 local translationCache = {}
 local originalTexts = {}
 local isTranslating = false
 local mainUI = nil
 local connection = nil
+
+print("[汉化工具] 变量初始化完成")
+print("[汉化工具] 初始内存使用: " .. getMemoryUsage())
 
 -- 安全的执行函数
 local function safeCall(func, errorMessage)
@@ -351,28 +373,42 @@ local function safeCall(func, errorMessage)
     return result
 end
 
--- 优化的翻译函数（使用缓存和分批加载）
+-- 优化的翻译函数（使用精简词典）
 local function translateText(text)
     if type(text) ~= "string" or text == "" then
         return text
     end
     
+    print("[翻译调试] 开始翻译文本: '" .. text .. "'")
+    
     -- 检查缓存
     if translationCache[text] then
+        print("[翻译调试] 使用缓存翻译: '" .. text .. "' -> '" .. translationCache[text] .. "'")
         return translationCache[text]
     end
     
     local translated = text
+    local replaceCount = 0
     
-    -- 按顺序在词典部分中查找翻译
-    for _, dictPart in pairs(translationDictParts) do
-        for eng, chn in pairs(dictPart) do
-            translated = string.gsub(translated, eng, chn)
+    -- 使用精简词典进行翻译
+    for eng, chn in pairs(coreTranslationDict) do
+        local original = translated
+        translated = string.gsub(translated, eng, chn)
+        if original ~= translated then
+            replaceCount = replaceCount + 1
+            print("[翻译调试] 替换 '" .. eng .. "' -> '" .. chn .. "'")
         end
     end
     
     -- 缓存结果
     translationCache[text] = translated
+    
+    if translated ~= text then
+        print("[翻译调试] 翻译完成: '" .. text .. "' -> '" .. translated .. "' (替换了 " .. replaceCount .. " 处)")
+    else
+        print("[翻译调试] 无翻译变化: '" .. text .. "'")
+    end
+    
     return translated
 end
 
@@ -382,32 +418,48 @@ local function storeOriginalText(object, property, value)
         originalTexts[object] = {}
     end
     originalTexts[object][property] = value
+    print("[存储调试] 存储原始文本: " .. tostring(object) .. "." .. property .. " = '" .. value .. "'")
+    print("[存储调试] 当前存储对象数: " .. countTable(originalTexts))
 end
 
 -- 处理单个GUI对象
 local function processGUIObject(obj)
-    safeCall(function()
+    return safeCall(function()
         if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
             -- 只处理可见的对象
             if obj:IsA("GuiObject") and not obj.Visible then
-                return
+                print("[GUI处理] 跳过不可见对象: " .. tostring(obj))
+                return false
             end
             
             local text = obj.Text
             if text and text ~= "" then
+                print("[GUI处理] 处理对象: " .. tostring(obj) .. ", 文本: '" .. text .. "'")
                 local translated = translateText(text)
                 if translated ~= text then
                     storeOriginalText(obj, "Text", text)
                     obj.Text = translated
+                    print("[GUI处理] 文本已更新: '" .. text .. "' -> '" .. translated .. "'")
+                    return true
+                else
+                    print("[GUI处理] 文本无变化: '" .. text .. "'")
+                    return false
                 end
+            else
+                print("[GUI处理] 跳过空文本对象: " .. tostring(obj))
+                return false
             end
+        else
+            print("[GUI处理] 跳过非文本对象: " .. tostring(obj) .. " (" .. obj.ClassName .. ")")
+            return false
         end
     end, "处理GUI对象失败: " .. tostring(obj))
 end
 
 -- 只处理可见的GUI元素
 local function processVisibleGUIObjects(parent)
-    safeCall(function()
+    return safeCall(function()
+        print("[可见元素处理] 开始扫描可见元素，父级: " .. tostring(parent))
         local visibleElements = {}
         
         -- 收集可见元素
@@ -419,6 +471,8 @@ local function processVisibleGUIObjects(parent)
                             table.insert(visibleElements, gui)
                         end
                     end
+                else
+                    print("[元素收集] 跳过不可见对象: " .. tostring(gui))
                 end
             end
             
@@ -429,32 +483,61 @@ local function processVisibleGUIObjects(parent)
         
         collectVisibleElements(parent)
         
+        print("[可见元素处理] 找到 " .. #visibleElements .. " 个可见文本元素")
+        
         -- 处理可见元素
+        local processedCount = 0
+        local successCount = 0
         for _, element in ipairs(visibleElements) do
-            processGUIObject(element)
+            processedCount = processedCount + 1
+            print("[可见元素处理] 处理元素 " .. processedCount .. "/" .. #visibleElements .. ": " .. tostring(element))
+            if processGUIObject(element) then
+                successCount = successCount + 1
+            end
         end
         
-        print("[汉化工具] 处理了 " .. #visibleElements .. " 个可见元素")
+        print("[可见元素处理] 完成! 处理了 " .. processedCount .. " 个元素，成功翻译 " .. successCount .. " 个")
+        print("[可见元素处理] 当前内存使用: " .. getMemoryUsage())
+        print("[可见元素处理] 翻译缓存大小: " .. countTable(translationCache))
+        print("[可见元素处理] 原始文本存储大小: " .. countTable(originalTexts))
+        
+        return successCount
     end, "处理可见GUI对象失败")
 end
 
 -- 恢复原始文本
 local function restoreOriginalTexts()
     safeCall(function()
+        print("[恢复调试] 开始恢复原始文本")
+        print("[恢复调试] 当前状态: isTranslating = " .. tostring(isTranslating))
+        print("[恢复调试] 连接状态: " .. (connection and "已连接" or "未连接"))
+        print("[恢复调试] 需要恢复的对象数: " .. countTable(originalTexts))
+        
         -- 确保连接被断开
         if connection then
             connection:Disconnect()
             connection = nil
+            print("[恢复调试] 已断开连接监听")
+        else
+            print("[恢复调试] 连接监听已为空")
         end
         
         -- 恢复文本
+        local restoredCount = 0
         for obj, properties in pairs(originalTexts) do
             if obj and obj.Parent then
                 for property, value in pairs(properties) do
-                    pcall(function()
+                    local success = pcall(function()
                         obj[property] = value
+                        restoredCount = restoredCount + 1
+                        print("[恢复调试] 恢复文本: " .. tostring(obj) .. "." .. property .. " = '" .. value .. "'")
                     end)
+                    if not success then
+                        warn("[恢复调试] 恢复失败: " .. tostring(obj) .. "." .. property)
+                    end
                 end
+            else
+                print("[恢复调试] 跳过无效对象: " .. tostring(obj))
             end
         end
         
@@ -462,42 +545,63 @@ local function restoreOriginalTexts()
         originalTexts = {}
         translationCache = {}
         
-        print("[汉化工具] 已恢复所有文本，连接状态:", connection == nil and "已断开" or "仍连接")
+        print("[恢复调试] 恢复完成! 共恢复了 " .. restoredCount .. " 个文本")
+        print("[恢复调试] 清空后缓存大小 - 翻译缓存: " .. countTable(translationCache) .. ", 原始文本: " .. countTable(originalTexts))
+        print("[恢复调试] 最终内存使用: " .. getMemoryUsage())
+        
     end, "恢复原始文本失败")
 end
 
 -- 开始翻译（按需翻译）
 local function startTranslation()
     safeCall(function()
+        print("[翻译启动] 开始翻译流程")
+        print("[翻译启动] 当前状态: isTranslating = " .. tostring(isTranslating))
+        print("[翻译启动] 当前内存使用: " .. getMemoryUsage())
+        
         -- 确保之前的连接被断开
         if connection then
             connection:Disconnect()
             connection = nil
+            print("[翻译启动] 已断开旧连接")
+        else
+            print("[翻译启动] 无旧连接需要断开")
         end
         
         -- 清空之前的记录
         originalTexts = {}
         translationCache = {}
+        print("[翻译启动] 已清空缓存和记录")
         
         -- 只翻译当前可见的UI元素
-        processVisibleGUIObjects(playerGui)
+        local processedCount = processVisibleGUIObjects(playerGui)
         
         -- 监听新添加的可见对象
         connection = playerGui.DescendantAdded:Connect(function(descendant)
+            print("[后代监听] 检测到新对象: " .. tostring(descendant) .. " (" .. descendant.ClassName .. ")")
             if isTranslating then
+                print("[后代监听] 准备处理新对象，延迟0.1秒")
                 -- 延迟处理，确保对象已完全加载
                 wait(0.1)
                 processGUIObject(descendant)
+            else
+                print("[后代监听] 翻译已关闭，跳过处理")
             end
         end)
         
-        print("[汉化工具] 翻译已启动，连接状态:", connection ~= nil)
+        print("[翻译启动] 翻译已启动!")
+        print("[翻译启动] 连接状态: " .. (connection ~= nil and "已连接" or "未连接"))
+        print("[翻译启动] 处理了 " .. tostring(processedCount) .. " 个元素")
+        print("[翻译启动] 最终内存使用: " .. getMemoryUsage())
+        
     end, "启动翻译失败")
 end
 
 -- 创建极简UI
 local function createSimpleUI()
     return safeCall(function()
+        print("[UI创建] 开始创建用户界面")
+        
         local screenGui = Instance.new("ScreenGui")
         screenGui.Name = "SimpleTranslatorUI"
         screenGui.ResetOnSpawn = false
@@ -565,20 +669,25 @@ local function createSimpleUI()
         
         -- 按钮事件
         toggleButton.MouseButton1Click:Connect(function()
+            print("[UI事件] 切换按钮被点击")
             -- 防止快速连续点击
             if toggleButton:GetAttribute("ClickCooldown") then
+                print("[UI事件] 点击冷却中，跳过")
                 return
             end
             toggleButton:SetAttribute("ClickCooldown", true)
             
             isTranslating = not isTranslating
-            
+            print("[UI事件] 切换翻译状态为: " .. tostring(isTranslating))
+
             if isTranslating then
+                print("[UI事件] 开启汉化模式")
                 toggleButton.Text = "关闭汉化"
                 toggleButton.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
                 statusLabel.Text = "状态: 汉化中"
                 startTranslation()
             else
+                print("[UI事件] 关闭汉化模式")
                 toggleButton.Text = "开启汉化"
                 toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
                 statusLabel.Text = "状态: 已关闭"
@@ -588,10 +697,12 @@ local function createSimpleUI()
             -- 0.5秒后解除点击冷却
             delay(0.5, function()
                 toggleButton:SetAttribute("ClickCooldown", false)
+                print("[UI事件] 点击冷却解除")
             end)
         end)
         
         screenGui.Parent = playerGui
+        print("[UI创建] 用户界面创建完成")
         return screenGui
     end, "创建UI失败")
 end
@@ -599,29 +710,46 @@ end
 -- 初始化
 local function initialize()
     safeCall(function()
+        print("[初始化] 开始初始化汉化工具")
+        print("[初始化] 当前内存使用: " .. getMemoryUsage())
+        
         if not playerGui then
+            print("[初始化] 等待PlayerGui...")
             playerGui = player:WaitForChild("PlayerGui")
+            print("[初始化] PlayerGui已就绪: " .. tostring(playerGui))
         end
         
+        print("[初始化] 创建用户界面...")
         mainUI = createSimpleUI()
         
         if mainUI then
-            print("[汉化工具] 加载成功！")
-            -- 计算词典条目数
-            local totalEntries = 0
-            for _, dictPart in pairs(translationDictParts) do
-                for _ in pairs(dictPart) do
-                    totalEntries = totalEntries + 1
-                end
-            end
-            print("[汉化工具] 词典分成 " .. #translationDictParts .. " 部分，共 " .. totalEntries .. " 个条目")
+            print("[初始化] 汉化工具加载成功!")
+            print("[初始化] 使用精简词典，包含 " .. countTable(coreTranslationDict) .. " 个核心词条")
+            print("[初始化] 最终内存使用: " .. getMemoryUsage())
         else
-            warn("[汉化工具] UI创建失败")
+            warn("[初始化] UI创建失败")
         end
+        
+        print("[初始化] 完成!")
+        
     end, "初始化失败")
 end
 
 -- 分步延迟启动
-wait(2) -- 等待2秒让游戏稳定
-print("[汉化工具] 开始初始化优化版汉化工具...")
+print("[启动] 等待2秒让游戏稳定...")
+wait(2)
+print("[启动] 开始初始化优化版汉化工具...")
+print("[启动] 当前内存使用: " .. getMemoryUsage())
 initialize()
+
+-- 定期状态报告
+while true do
+    wait(30) -- 每30秒报告一次状态
+    print("[状态报告] === 汉化工具状态 ===")
+    print("[状态报告] 翻译状态: " .. (isTranslating and "开启" or "关闭"))
+    print("[状态报告] 连接状态: " .. (connection and "已连接" or "未连接"))
+    print("[状态报告] 翻译缓存大小: " .. countTable(translationCache))
+    print("[状态报告] 原始文本存储: " .. countTable(originalTexts))
+    print("[状态报告] 内存使用: " .. getMemoryUsage())
+    print("[状态报告] ====================")
+end
