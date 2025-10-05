@@ -303,39 +303,103 @@ Tabs.Home:Button({
     end
 })
 
--- 通用功能标签页
-Tabs.General:Section({Title = "移动设置"})
+-- 通用功能标签页 - 使用按钮替代滑动条
+Tabs.General:Section({Title = "移动设置 - 按钮版"})
 
--- 修复速度滑动按钮 - 使用正确的WindUI语法
-Tabs.General:Slider({
-    Title = "移动速度",
-    Desc = "设置角色移动速度",
-    Default = 16,
-    Min = 16,
-    Max = 200,
-    Rounding = 1,
-    Callback = function(value)
-        print("速度设置为:", value)
+-- 速度设置按钮组
+local currentSpeed = 16
+local currentJump = 50
+
+Tabs.General:Label({Title = "当前速度: " .. currentSpeed})
+Tabs.General:Label({Title = "当前跳跃: " .. currentJump})
+
+-- 速度按钮
+Tabs.General:Button({
+    Title = "速度 +10",
+    Callback = function()
+        currentSpeed = math.min(200, currentSpeed + 10)
         local character = game.Players.LocalPlayer.Character
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = value
+            character.Humanoid.WalkSpeed = currentSpeed
         end
+        WindUI:Notify({
+            Title = "速度设置",
+            Content = "速度已设置为: " .. currentSpeed,
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
     end
 })
 
-Tabs.General:Slider({
-    Title = "跳跃高度",
-    Desc = "设置角色跳跃高度", 
-    Default = 50,
-    Min = 50,
-    Max = 200,
-    Rounding = 1,
-    Callback = function(value)
-        print("跳跃高度设置为:", value)
+Tabs.General:Button({
+    Title = "速度 -10", 
+    Callback = function()
+        currentSpeed = math.max(16, currentSpeed - 10)
         local character = game.Players.LocalPlayer.Character
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.JumpPower = value
+            character.Humanoid.WalkSpeed = currentSpeed
         end
+        WindUI:Notify({
+            Title = "速度设置",
+            Content = "速度已设置为: " .. currentSpeed,
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+    end
+})
+
+-- 跳跃按钮
+Tabs.General:Button({
+    Title = "跳跃 +10",
+    Callback = function()
+        currentJump = math.min(200, currentJump + 10)
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.JumpPower = currentJump
+        end
+        WindUI:Notify({
+            Title = "跳跃设置", 
+            Content = "跳跃高度已设置为: " .. currentJump,
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+    end
+})
+
+Tabs.General:Button({
+    Title = "跳跃 -10",
+    Callback = function()
+        currentJump = math.max(50, currentJump - 10)
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.JumpPower = currentJump
+        end
+        WindUI:Notify({
+            Title = "跳跃设置",
+            Content = "跳跃高度已设置为: " .. currentJump, 
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+    end
+})
+
+-- 重置按钮
+Tabs.General:Button({
+    Title = "重置移动设置",
+    Callback = function()
+        currentSpeed = 16
+        currentJump = 50
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = currentSpeed
+            character.Humanoid.JumpPower = currentJump
+        end
+        WindUI:Notify({
+            Title = "重置成功",
+            Content = "移动设置已重置",
+            Duration = 3,
+            Color = ColorSystem.successColor
+        })
     end
 })
 
