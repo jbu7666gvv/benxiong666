@@ -1,6 +1,8 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 
 -- 将词典拆分成多个部分
 local translationDictParts = {
@@ -331,6 +333,67 @@ local translationDictParts = {
         ["Lag"] = "延迟",
         ["Ping"] = "ping值",
         ["FPS"] = "帧率",
+    },
+
+    -- 新增：脚本UI常用词汇
+    part6 = {
+        ["Execute Script"] = "执行脚本",
+        ["Script Hub"] = "脚本中心",
+        ["Scripts"] = "脚本",
+        ["Universal"] = "通用",
+        ["Local"] = "本地",
+        ["Remote"] = "远程",
+        ["Rejoin"] = "重新加入",
+        ["Server Hop"] = "切换服务器",
+        ["Re-execute"] = "重新执行",
+        ["Destroy GUI"] = "销毁界面",
+        ["Credits"] = "制作人员",
+        ["Discord"] = "Discord",
+        ["Telegram"] = "Telegram",
+        ["Website"] = "网站",
+        ["Support"] = "支持",
+        ["Documentation"] = "文档",
+        ["Changelog"] = "更新日志",
+        ["Credits"] = "鸣谢",
+        ["About"] = "关于",
+        ["Close"] = "关闭",
+        ["Exit"] = "退出",
+        ["Minimize"] = "最小化",
+        ["Maximize"] = "最大化",
+        ["Drag"] = "拖动",
+        ["Drag Me"] = "拖动我",
+        ["Position"] = "位置",
+        ["Size"] = "大小",
+        ["Scale"] = "缩放",
+        ["Rotation"] = "旋转",
+        ["Opacity"] = "不透明度",
+        ["Blur"] = "模糊",
+        ["Roundness"] = "圆角",
+        ["Shadow"] = "阴影",
+        ["Gradient"] = "渐变",
+        ["Border"] = "边框",
+        ["Margin"] = "边距",
+        ["Padding"] = "内边距",
+        ["Spacing"] = "间距",
+        ["Alignment"] = "对齐",
+        ["Center"] = "居中",
+        ["Left"] = "左对齐",
+        ["Right"] = "右对齐",
+        ["Top"] = "顶部",
+        ["Bottom"] = "底部",
+        ["Middle"] = "中间",
+        ["Auto"] = "自动",
+        ["Hidden"] = "隐藏",
+        ["Visible"] = "可见",
+        ["Locked"] = "锁定",
+        ["Unlocked"] = "解锁",
+        ["Protected"] = "受保护",
+        ["Whitelist"] = "白名单",
+        ["Blacklist"] = "黑名单",
+        ["Admin"] = "管理员",
+        ["Moderator"] = "版主",
+        ["User"] = "用户",
+        ["Guest"] = "游客",
     }
 }
 
@@ -339,7 +402,7 @@ local translationCache = {}
 local originalTexts = {}
 local isTranslating = false
 local mainUI = nil
-local connection = nil
+local connections = {}
 
 -- 调试模式
 local DEBUG_MODE = true
@@ -422,28 +485,75 @@ end
 -- 处理单个GUI对象
 local function processGUIObject(obj)
     safeCall(function()
+        -- 处理文本属性
         if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-            -- 放宽可见性检查
-            if obj:IsA("GuiObject") and obj.Visible == false then
-                debugPrint("跳过不可见对象: " .. tostring(obj) .. " - " .. tostring(obj.Text))
-                return
-            end
-            
             local text = obj.Text
             if text and text ~= "" then
-                debugPrint("处理对象: " .. tostring(obj) .. " - 文本: '" .. text .. "'")
+                debugPrint("处理GUI对象: " .. tostring(obj) .. " - 文本: '" .. text .. "'")
                 
                 local translated = translateText(text)
                 if translated ~= text then
                     storeOriginalText(obj, "Text", text)
                     obj.Text = translated
                     debugPrint("成功翻译: '" .. text .. "' -> '" .. translated .. "'")
-                else
-                    debugPrint("无需翻译: '" .. text .. "'")
+                end
+            end
+        end
+        
+        -- 处理占位符文本
+        if obj:IsA("TextBox") and obj.PlaceholderText then
+            local placeholder = obj.PlaceholderText
+            if placeholder ~= "" then
+                debugPrint("处理占位符: " .. tostring(obj) .. " - '" .. placeholder .. "'")
+                
+                local translated = translateText(placeholder)
+                if translated ~= placeholder then
+                    storeOriginalText(obj, "PlaceholderText", placeholder)
+                    obj.PlaceholderText = translated
+                    debugPrint("成功翻译占位符: '" .. placeholder .. "' -> '" .. translated .. "'")
+                end
+            end
+        end
+        
+        -- 处理ImageLabel和ImageButton的提示文本（如果有）
+        if (obj:IsA("ImageLabel") or obj:IsA("ImageButton")) and obj:FindFirstChild("Tooltip") then
+            local tooltip = obj.Tooltip
+            if tooltip and tooltip ~= "" then
+                debugPrint("处理工具提示: " .. tostring(obj) .. " - '" .. tooltip .. "'")
+                
+                local translated = translateText(tooltip)
+                if translated ~= tooltip then
+                    storeOriginalText(tooltip, "Text", tooltip.Text)
+                    tooltip.Text = translated
                 end
             end
         end
     end, "处理GUI对象失败: " .. tostring(obj))
+end
+
+-- 处理CoreGui中的脚本UI
+local function processCoreGui()
+    safeCall(function()
+        debugPrint("开始处理CoreGui...")
+        local processedCount = 0
+        
+        local function processRecursive(parent)
+            for _, child in ipairs(parent:GetChildren()) do
+                -- 处理当前对象
+                if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                    processGUIObject(child)
+                    processedCount = processedCount + 1
+                end
+                
+                -- 递归处理子对象
+                processRecursive(child)
+            end
+        end
+        
+        processRecursive(CoreGui)
+        debugPrint("CoreGui处理完成，处理了 " .. processedCount .. " 个对象")
+        return processedCount
+    end, "处理CoreGui失败")
 end
 
 -- 递归处理所有GUI元素
@@ -470,17 +580,41 @@ local function processAllGUIObjects(parent)
     end, "处理所有GUI对象失败")
 end
 
+-- 监听新创建的GUI
+local function setupGUIMonitoring()
+    safeCall(function()
+        -- 监听PlayerGui
+        local playerGuiConnection = playerGui.DescendantAdded:Connect(function(descendant)
+            if isTranslating then
+                wait(0.1) -- 延迟确保对象完全加载
+                processGUIObject(descendant)
+            end
+        end)
+        table.insert(connections, playerGuiConnection)
+        
+        -- 监听CoreGui（脚本UI通常在这里）
+        local coreGuiConnection = CoreGui.DescendantAdded:Connect(function(descendant)
+            if isTranslating then
+                wait(0.1) -- 延迟确保对象完全加载
+                processGUIObject(descendant)
+            end
+        end)
+        table.insert(connections, coreGuiConnection)
+        
+        debugPrint("GUI监控已设置")
+    end, "设置GUI监控失败")
+end
+
 -- 恢复原始文本
 local function restoreOriginalTexts()
     safeCall(function()
         debugPrint("开始恢复原始文本...")
         
-        -- 确保连接被断开
-        if connection then
+        -- 断开所有连接
+        for _, connection in ipairs(connections) do
             connection:Disconnect()
-            connection = nil
-            debugPrint("已断开监听连接")
         end
+        connections = {}
         
         -- 恢复文本
         local restoredCount = 0
@@ -500,7 +634,7 @@ local function restoreOriginalTexts()
         originalTexts = {}
         translationCache = {}
         
-        debugPrint("已恢复 " .. restoredCount .. " 个文本，连接状态: " .. (connection == nil and "已断开" or "仍连接"))
+        debugPrint("已恢复 " .. restoredCount .. " 个文本")
     end, "恢复原始文本失败")
 end
 
@@ -509,68 +643,71 @@ local function startTranslation()
     safeCall(function()
         debugPrint("开始翻译过程...")
         
-        -- 确保之前的连接被断开
-        if connection then
-            connection:Disconnect()
-            connection = nil
-        end
-        
         -- 清空之前的记录
         originalTexts = {}
         translationCache = {}
         
-        -- 处理所有GUI对象
-        local processedCount = processAllGUIObjects(playerGui)
+        -- 处理PlayerGui
+        local playerGuiCount = processAllGUIObjects(playerGui)
         
-        -- 监听新添加的对象
-        connection = playerGui.DescendantAdded:Connect(function(descendant)
-            if isTranslating then
-                -- 立即处理新对象
-                wait(0.05) -- 短暂延迟确保对象完全加载
-                processGUIObject(descendant)
-            end
-        end)
+        -- 处理CoreGui（脚本UI）
+        local coreGuiCount = processCoreGui()
         
-        debugPrint("翻译完成，处理了 " .. processedCount .. " 个对象，监听状态: " .. (connection ~= nil))
+        -- 设置监控
+        setupGUIMonitoring()
+        
+        debugPrint("翻译完成，PlayerGui: " .. playerGuiCount .. " 个对象, CoreGui: " .. coreGuiCount .. " 个对象")
     end, "启动翻译失败")
 end
 
--- 创建极简UI
-local function createSimpleUI()
+-- 创建改进的UI
+local function createEnhancedUI()
     return safeCall(function()
         local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "SimpleTranslatorUI"
+        screenGui.Name = "EnhancedTranslatorUI"
         screenGui.ResetOnSpawn = false
         screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 250, 0, 150)
+        mainFrame.Size = UDim2.new(0, 300, 0, 200)
         mainFrame.Position = UDim2.new(0, 10, 0, 10)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
         mainFrame.BorderSizePixel = 0
         mainFrame.Parent = screenGui
         
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = mainFrame
         
+        local dropShadow = Instance.new("ImageLabel")
+        dropShadow.Name = "DropShadow"
+        dropShadow.Image = "rbxassetid://6014261993"
+        dropShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+        dropShadow.ImageTransparency = 0.5
+        dropShadow.ScaleType = Enum.ScaleType.Slice
+        dropShadow.SliceCenter = Rect.new(49, 49, 450, 450)
+        dropShadow.Size = UDim2.new(1, 24, 1, 24)
+        dropShadow.Position = UDim2.new(0, -12, 0, -12)
+        dropShadow.BackgroundTransparency = 1
+        dropShadow.Parent = mainFrame
+        
         local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, 0, 0, 30)
+        title.Size = UDim2.new(1, 0, 0, 40)
         title.Position = UDim2.new(0, 0, 0, 0)
-        title.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        title.Text = "汉化工具 v2.1"
+        title.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+        title.Text = "高级汉化工具 v3.0"
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
         title.TextScaled = true
-        title.Font = Enum.Font.Gotham
+        title.Font = Enum.Font.GothamBold
         title.Parent = mainFrame
         
         local titleCorner = Instance.new("UICorner")
-        titleCorner.CornerRadius = UDim.new(0, 6)
+        titleCorner.CornerRadius = UDim.new(0, 8)
         titleCorner.Parent = title
         
         local toggleButton = Instance.new("TextButton")
-        toggleButton.Size = UDim2.new(0.8, 0, 0, 40)
-        toggleButton.Position = UDim2.new(0.1, 0, 0.25, 0)
+        toggleButton.Size = UDim2.new(0.85, 0, 0, 45)
+        toggleButton.Position = UDim2.new(0.075, 0, 0.25, 0)
         toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
         toggleButton.Text = "开启汉化"
         toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -583,29 +720,48 @@ local function createSimpleUI()
         buttonCorner.Parent = toggleButton
         
         local statusLabel = Instance.new("TextLabel")
-        statusLabel.Size = UDim2.new(0.8, 0, 0, 25)
-        statusLabel.Position = UDim2.new(0.1, 0, 0.6, 0)
+        statusLabel.Size = UDim2.new(0.85, 0, 0, 25)
+        statusLabel.Position = UDim2.new(0.075, 0, 0.55, 0)
         statusLabel.BackgroundTransparency = 1
-        statusLabel.Text = "状态: 等待"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        statusLabel.Text = "状态: 等待中"
+        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
         statusLabel.TextScaled = true
         statusLabel.Font = Enum.Font.Gotham
         statusLabel.Parent = mainFrame
         
         local infoLabel = Instance.new("TextLabel")
-        infoLabel.Size = UDim2.new(0.8, 0, 0, 20)
-        infoLabel.Position = UDim2.new(0.1, 0, 0.85, 0)
+        infoLabel.Size = UDim2.new(0.85, 0, 0, 20)
+        infoLabel.Position = UDim2.new(0.075, 0, 0.75, 0)
         infoLabel.BackgroundTransparency = 1
-        infoLabel.Text = "调试模式已开启"
-        infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        infoLabel.Text = "支持游戏GUI和脚本UI汉化"
+        infoLabel.TextColor3 = Color3.fromRGB(150, 150, 180)
         infoLabel.TextScaled = true
         infoLabel.Font = Enum.Font.Gotham
         infoLabel.TextSize = 12
         infoLabel.Parent = mainFrame
         
+        local debugLabel = Instance.new("TextLabel")
+        debugLabel.Size = UDim2.new(0.85, 0, 0, 15)
+        debugLabel.Position = UDim2.new(0.075, 0, 0.9, 0)
+        debugLabel.BackgroundTransparency = 1
+        debugLabel.Text = "调试模式: 开启"
+        debugLabel.TextColor3 = Color3.fromRGB(100, 100, 150)
+        debugLabel.TextScaled = true
+        debugLabel.Font = Enum.Font.Gotham
+        debugLabel.TextSize = 10
+        debugLabel.Parent = mainFrame
+        
+        -- 按钮点击效果
+        toggleButton.MouseButton1Down:Connect(function()
+            TweenService:Create(toggleButton, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(45, 75, 185)}):Play()
+        end)
+        
+        toggleButton.MouseButton1Up:Connect(function()
+            TweenService:Create(toggleButton, TweenInfo.new(0.1), {BackgroundColor3 = isTranslating and Color3.fromRGB(220, 20, 60) or Color3.fromRGB(65, 105, 225)}):Play()
+        end)
+        
         -- 按钮事件
         toggleButton.MouseButton1Click:Connect(function()
-            -- 防止快速连续点击
             if toggleButton:GetAttribute("ClickCooldown") then
                 return
             end
@@ -616,27 +772,26 @@ local function createSimpleUI()
             if isTranslating then
                 toggleButton.Text = "关闭汉化"
                 toggleButton.BackgroundColor3 = Color3.fromRGB(220, 20, 60)
-                statusLabel.Text = "状态: 汉化中"
-                debugPrint("用户点击开启汉化")
+                statusLabel.Text = "状态: 汉化中..."
+                debugPrint("用户开启汉化")
                 startTranslation()
             else
                 toggleButton.Text = "开启汉化"
                 toggleButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
                 statusLabel.Text = "状态: 已关闭"
-                debugPrint("用户点击关闭汉化")
+                debugPrint("用户关闭汉化")
                 restoreOriginalTexts()
             end
             
-            -- 0.5秒后解除点击冷却
             delay(0.5, function()
                 toggleButton:SetAttribute("ClickCooldown", false)
             end)
         end)
         
         screenGui.Parent = playerGui
-        debugPrint("UI创建成功")
+        debugPrint("增强UI创建成功")
         return screenGui
-    end, "创建UI失败")
+    end, "创建增强UI失败")
 end
 
 -- 初始化
@@ -646,11 +801,13 @@ local function initialize()
             playerGui = player:WaitForChild("PlayerGui")
         end
         
-        mainUI = createSimpleUI()
+        mainUI = createEnhancedUI()
         
         if mainUI then
-            print("[汉化工具] 加载成功！版本 2.1")
+            print("====================================")
+            print("[汉化工具] 加载成功！版本 3.0")
             print("[汉化工具] 调试模式: " .. (DEBUG_MODE and "开启" or "关闭"))
+            print("[汉化工具] 支持: 游戏GUI + 脚本UI")
             
             -- 计算词典条目数
             local totalEntries = 0
@@ -659,12 +816,21 @@ local function initialize()
                     totalEntries = totalEntries + 1
                 end
             end
-            print("[汉化工具] 词典分成 " .. #translationDictParts .. " 部分，共 " .. totalEntries .. " 个条目")
+            print("[汉化工具] 词典: " .. #translationDictParts .. " 个分类, " .. totalEntries .. " 个词条")
+            print("====================================")
             
             -- 测试翻译功能
-            local testText = "Player Health"
-            local testResult = translateText(testText)
-            print("[汉化工具] 测试翻译: '" .. testText .. "' -> '" .. testResult .. "'")
+            local testTexts = {
+                "Execute Script",
+                "Script Hub", 
+                "Player Health",
+                "God Mode"
+            }
+            
+            for _, testText in ipairs(testTexts) do
+                local testResult = translateText(testText)
+                print("[测试] '" .. testText .. "' -> '" .. testResult .. "'")
+            end
         else
             warn("[汉化工具] UI创建失败")
         end
@@ -672,7 +838,7 @@ local function initialize()
 end
 
 -- 分步延迟启动
-wait(3) -- 等待3秒让游戏稳定
-print("[汉化工具] 开始初始化优化版汉化工具...")
-print("[汉化工具] 如果汉化无效，请查看输出窗口的调试信息")
+wait(3)
+print("[汉化工具] 正在启动增强版汉化工具...")
+print("[汉化工具] 请查看输出窗口了解详细状态")
 initialize()
