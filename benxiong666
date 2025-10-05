@@ -303,80 +303,33 @@ Tabs.Home:Button({
     end
 })
 
--- 通用功能标签页 - 使用输入框方案
-Tabs.General:Section({Title = "移动设置 - 输入版"})
+-- 通用功能标签页
+Tabs.General:Section({Title = "通用功能"})
 
-Tabs.General:Textbox({
-    Title = "设置移动速度",
-    Default = "16",
-    Placeholder = "输入速度值 (16-200)",
+-- 修复速度滑动按钮
+Tabs.General:Slider({
+    Title = "速度",
+    Default = 16,
+    Minimum = 16,
+    Maximum = 200,
     Callback = function(value)
-        local speed = tonumber(value)
-        if speed and speed >= 16 and speed <= 200 then
-            local character = game.Players.LocalPlayer.Character
-            if character and character:FindFirstChild("Humanoid") then
-                character.Humanoid.WalkSpeed = speed
-                WindUI:Notify({
-                    Title = "速度设置",
-                    Content = "速度已设置为: " .. speed,
-                    Duration = 3,
-                    Color = ColorSystem.successColor
-                })
-            end
-        else
-            WindUI:Notify({
-                Title = "输入错误",
-                Content = "请输入 16-200 之间的数字",
-                Duration = 3,
-                Color = ColorSystem.errorColor
-            })
-        end
-    end
-})
-
-Tabs.General:Textbox({
-    Title = "设置跳跃高度", 
-    Default = "50",
-    Placeholder = "输入跳跃高度 (50-200)",
-    Callback = function(value)
-        local jump = tonumber(value)
-        if jump and jump >= 50 and jump <= 200 then
-            local character = game.Players.LocalPlayer.Character
-            if character and character:FindFirstChild("Humanoid") then
-                character.Humanoid.JumpPower = jump
-                WindUI:Notify({
-                    Title = "跳跃设置",
-                    Content = "跳跃高度已设置为: " .. jump,
-                    Duration = 3, 
-                    Color = ColorSystem.successColor
-                })
-            end
-        else
-            WindUI:Notify({
-                Title = "输入错误",
-                Content = "请输入 50-200 之间的数字",
-                Duration = 3,
-                Color = ColorSystem.errorColor
-            })
-        end
-    end
-})
-
--- 重置移动设置按钮
-Tabs.General:Button({
-    Title = "重置移动设置",
-    Callback = function()
         local character = game.Players.LocalPlayer.Character
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = 16
-            character.Humanoid.JumpPower = 50
+            character.Humanoid.WalkSpeed = value
         end
-        WindUI:Notify({
-            Title = "重置成功",
-            Content = "移动设置已重置为默认值",
-            Duration = 3,
-            Color = ColorSystem.successColor
-        })
+    end
+})
+
+Tabs.General:Slider({
+    Title = "跳跃高度",
+    Default = 50,
+    Minimum = 50,
+    Maximum = 200,
+    Callback = function(value)
+        local character = game.Players.LocalPlayer.Character
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.JumpPower = value
+        end
     end
 })
 
@@ -393,6 +346,13 @@ Tabs.General:Toggle({
             game.Lighting.Ambient = Color3.new(0, 0, 0)
             game.Lighting.Brightness = 1
         end
+    end
+})
+
+Tabs.General:Button({
+    Title = "速度更改",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/Zuw5T7DP",true))()
     end
 })
 
