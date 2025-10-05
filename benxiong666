@@ -304,55 +304,42 @@ Tabs.Home:Button({
 })
 
 -- 通用功能标签页
-Tabs.General:Section({Title = "通用功能"})
+Tabs.General:Section({Title = "移动设置"})
 
+-- 修复速度滑动按钮 - 使用正确的WindUI语法
 Tabs.General:Slider({
-    Title = "速度",
+    Title = "移动速度",
+    Desc = "设置角色移动速度",
     Default = 16,
-    Minimum = 16,
-    Maximum = 200,
+    Min = 16,
+    Max = 200,
+    Rounding = 1,
     Callback = function(value)
+        print("速度设置为:", value)
         local character = game.Players.LocalPlayer.Character
-        if character then
-            -- 等待Humanoid加载
-            local humanoid = character:WaitForChild("Humanoid")
-            humanoid.WalkSpeed = value
-            
-            -- 添加持续监控，防止被重置
-            spawn(function()
-                while task.wait(1) do
-                    if humanoid and humanoid.WalkSpeed ~= value then
-                        humanoid.WalkSpeed = value
-                    end
-                end
-            end)
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = value
         end
     end
 })
 
 Tabs.General:Slider({
     Title = "跳跃高度",
+    Desc = "设置角色跳跃高度", 
     Default = 50,
-    Minimum = 50,
-    Maximum = 200,
+    Min = 50,
+    Max = 200,
+    Rounding = 1,
     Callback = function(value)
+        print("跳跃高度设置为:", value)
         local character = game.Players.LocalPlayer.Character
-        if character then
-            local humanoid = character:WaitForChild("Humanoid")
-            humanoid.JumpPower = value
-            
-            spawn(function()
-                while task.wait(1) do
-                    if humanoid and humanoid.JumpPower ~= value then
-                        humanoid.JumpPower = value
-                    end
-                end
-            end)
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.JumpPower = value
         end
     end
 })
 
-Tabs.General:Section({Title = "通用功能"})
+Tabs.General:Section({Title = "视觉功能"})
 
 Tabs.General:Toggle({
     Title = "夜视",
