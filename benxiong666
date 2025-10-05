@@ -251,7 +251,7 @@ Window:SelectTab(1)
 -- 主页内容
 Tabs.Home:Paragraph({
     Title = "欢迎使用本熊汉化",
-    Desc = "为Roblox脚本提供汉化 - 简洁稳定版！",
+    Desc = "为Roblox脚本提供汉化",
 })
 
 Tabs.Home:Paragraph({
@@ -303,36 +303,6 @@ Tabs.Home:Button({
     end
 })
 
--- 通用功能标签页
-Tabs.General:Section({Title = "通用功能"})
-
--- 修复速度滑动按钮
-Tabs.General:Slider({
-    Title = "速度",
-    Default = 16,
-    Minimum = 16,
-    Maximum = 200,
-    Callback = function(value)
-        local character = game.Players.LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = value
-        end
-    end
-})
-
-Tabs.General:Slider({
-    Title = "跳跃高度",
-    Default = 50,
-    Minimum = 50,
-    Maximum = 200,
-    Callback = function(value)
-        local character = game.Players.LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.JumpPower = value
-        end
-    end
-})
-
 Tabs.General:Section({Title = "通用功能"})
 
 Tabs.General:Toggle({
@@ -346,13 +316,6 @@ Tabs.General:Toggle({
             game.Lighting.Ambient = Color3.new(0, 0, 0)
             game.Lighting.Brightness = 1
         end
-    end
-})
-
-Tabs.General:Button({
-    Title = "速度更改",
-    Callback = function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/Zuw5T7DP",true))()
     end
 })
 
@@ -621,11 +584,6 @@ Tabs.FlyAndTeleport:Button({
 -- 密钥管理页面
 Tabs.KeyManager:Section({Title = "密钥状态"})
 
-Tabs.KeyManager:Paragraph({
-    Title = "密钥信息",
-    Desc = "当前密钥系统已启用，支持自动保存和验证"
-})
-
 Tabs.KeyManager:Button({
     Title = "重新验证密钥",
     Callback = function()
@@ -648,13 +606,6 @@ Tabs.KeyManager:Button({
             Color = ColorSystem.primaryColor
         })
     end
-})
-
-Tabs.KeyManager:Section({Title = "密钥说明"})
-
-Tabs.KeyManager:Paragraph({
-    Title = "使用说明",
-    Desc = "• 密钥用于验证用户身份\n• 支持自动保存功能\n• 验证成功后无需重复输入"
 })
 
 -- 自动汉化脚本定义
@@ -833,7 +784,7 @@ Tabs.Other:Button({
 
 -- 完成通知
 WindUI:Notify({
-    Title = "本熊汉化 - 简洁稳定版", 
+    Title = "本熊汉化", 
     Content = "界面加载完成！", 
     Duration = 4,
     Color = ColorSystem.successColor
