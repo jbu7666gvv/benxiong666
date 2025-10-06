@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 
 -- 自动性能测试器
 local AutoPerformanceTester = {}
+AutoPerformanceTester.playerMonitors = {}
 
 -- 帧率显示器
 local FPSMonitor = {}
@@ -65,19 +66,13 @@ end
 
 -- 设置玩家测试
 function AutoPerformanceTester:SetupPlayerTest(player)
-	-- 为玩家创建FPS显示器
-	if not player:FindFirstChild("FPSMonitor") then
-		local folder = Instance.new("Folder")
-		folder.Name = "FPSMonitor"
-		folder.Parent = player
-		
-		local fpsMonitor = FPSMonitor.new()
-		fpsMonitor:Start()
-		folder:SetAttribute("FPSMonitor", fpsMonitor)
-	end
-	
 	-- 清理之前的测试
 	self:CleanupTest(player)
+	
+	-- 创建FPS监控器
+	local fpsMonitor = FPSMonitor.new()
+	fpsMonitor:Start()
+	self.playerMonitors[player] = fpsMonitor
 	
 	-- 创建测试容器
 	local testFolder = Instance.new("Folder")
@@ -97,10 +92,25 @@ function AutoPerformanceTester:SetupPlayerTest(player)
 		self:CreateMixedTest(testFolder, self.intensity)
 	end
 	
-	-- 开始监控性能
-	self:StartPerformanceMonitoring(player)
+	-- 通知客户端开始监控
+	self:NotifyClientToMonitor(player)
 	
 	print("玩家 " .. player.Name .. " 的性能测试已启动")
+end
+
+-- 通知客户端开始监控
+function AutoPerformanceTester:NotifyClientToMonitor(player)
+	local remoteEvent = Instance.new("RemoteEvent")
+	remoteEvent.Name = "StartClientMonitoring"
+	
+	-- 设置测试信息
+	remoteEvent:SetAttribute("TestType", self.testType)
+	remoteEvent:SetAttribute("TestIntensity", self.intensity)
+	
+	remoteEvent.Parent = player
+	
+	-- 触发客户端监控
+	remoteEvent:FireClient(player, self.testType, self.intensity)
 end
 
 -- 创建大量零件测试
@@ -265,180 +275,36 @@ function AutoPerformanceTester:CreateMixedTest(folder, intensity)
 	self:CreateParticlesTest(folder, intensity * 0.3)
 end
 
--- 开始性能监控
-function AutoPerformanceTester:StartPerformanceMonitoring(player)
-	local fpsMonitor = player.FPSMonitor:GetAttribute("FPSMonitor")
-	
-	local monitorScript = Instance.new("LocalScript")
-	monitorScript.Name = "PerformanceMonitor"
-	
-	local source = [[
-		local Players = game:GetService("Players")
-		local RunService = game:GetService("RunService")
-		local Stats = game:GetService("Stats")
-		local player = Players.LocalPlayer
-		
-		-- 创建显示UI
-		local screenGui = Instance.new("ScreenGui")
-		screenGui.Name = "PerformanceDisplay"
-		screenGui.Parent = player.PlayerGui
-		screenGui.DisplayOrder = 999
-		
-		local frame = Instance.new("Frame")
-		frame.Size = UDim2.new(0, 250, 0, 150)
-		frame.Position = UDim2.new(0, 10, 0, 10)
-		frame.BackgroundColor3 = Color3.new(0, 0, 0)
-		frame.BackgroundTransparency = 0.3
-		frame.BorderSizePixel = 0
-		frame.Parent = screenGui
-		
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 8)
-		corner.Parent = frame
-		
-		local padding = Instance.new("UIPadding")
-		padding.PaddingLeft = UDim.new(0, 15)
-		padding.PaddingTop = UDim.new(0, 15)
-		padding.Parent = frame
-		
-		local title = Instance.new("TextLabel")
-		title.Size = UDim2.new(1, 0, 0, 20)
-		title.Position = UDim2.new(0, 0, 0, 0)
-		title.BackgroundTransparency = 1
-		title.Text = "🔧 性能测试监控"
-		title.TextColor3 = Color3.new(1, 1, 0)
-		title.TextSize = 16
-		title.TextXAlignment = Enum.TextXAlignment.Left
-		title.Font = Enum.Font.GothamBold
-		title.Parent = frame
-		
-		local fpsLabel = Instance.new("TextLabel")
-		fpsLabel.Size = UDim2.new(1, 0, 0, 20)
-		fpsLabel.Position = UDim2.new(0, 0, 0, 25)
-		fpsLabel.BackgroundTransparency = 1
-		fpsLabel.Text = "🎮 FPS: --"
-		fpsLabel.TextColor3 = Color3.new(0.5, 1, 0.5)
-		fpsLabel.TextSize = 14
-		fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-		fpsLabel.Parent = frame
-		
-		local memoryLabel = Instance.new("TextLabel")
-		memoryLabel.Size = UDim2.new(1, 0, 0, 20)
-		memoryLabel.Position = UDim2.new(0, 0, 0, 50)
-		memoryLabel.BackgroundTransparency = 1
-		memoryLabel.Text = "💾 内存: --"
-		memoryLabel.TextColor3 = Color3.new(0.5, 0.8, 1)
-		memoryLabel.TextSize = 14
-		memoryLabel.TextXAlignment = Enum.TextXAlignment.Left
-		memoryLabel.Parent = frame
-		
-		local pingLabel = Instance.new("TextLabel")
-		pingLabel.Size = UDim2.new(1, 0, 0, 20)
-		pingLabel.Position = UDim2.new(0, 0, 0, 75)
-		pingLabel.BackgroundTransparency = 1
-		pingLabel.Text = "📡 Ping: --"
-		pingLabel.TextColor3 = Color3.new(1, 0.8, 0.5)
-		pingLabel.TextSize = 14
-		pingLabel.TextXAlignment = Enum.TextXAlignment.Left
-		pingLabel.Parent = frame
-		
-		local statusLabel = Instance.new("TextLabel")
-		statusLabel.Size = UDim2.new(1, 0, 0, 20)
-		statusLabel.Position = UDim2.new(0, 0, 0, 100)
-		statusLabel.BackgroundTransparency = 1
-		statusLabel.Text = "✅ 测试运行中"
-		statusLabel.TextColor3 = Color3.new(1, 1, 1)
-		statusLabel.TextSize = 14
-		statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-		statusLabel.Parent = frame
-		
-		-- 颜色根据FPS值变化
-		local function getFPSColor(fps)
-			if fps >= 60 then
-				return Color3.new(0, 1, 0)  -- 绿色
-			elseif fps >= 30 then
-				return Color3.new(1, 1, 0)  -- 黄色
-			else
-				return Color3.new(1, 0, 0)  -- 红色
-			end
-		end
-		
-		-- 更新显示
-		local frameCount = 0
-		local lastUpdate = tick()
-		
-		while true do
-			frameCount = frameCount + 1
-			
-			-- 每秒更新一次显示
-			if tick() - lastUpdate >= 0.5 then
-				local fpsMonitor = player:FindFirstChild("FPSMonitor")
-				if fpsMonitor then
-					local monitor = fpsMonitor:GetAttribute("FPSMonitor")
-					if monitor then
-						local fps = monitor:GetFPS()
-						fpsLabel.Text = "🎮 FPS: " .. tostring(fps)
-						fpsLabel.TextColor3 = getFPSColor(fps)
-					end
-				end
-				
-				-- 获取内存使用情况
-				local memory = collectgarbage("count")
-				memoryLabel.Text = string.format("💾 内存: %.1f MB", memory / 1024)
-				
-				-- 获取网络统计
-				local stats = Stats:FindFirstChild("PerformanceStats")
-				if stats then
-					local ping = stats:FindFirstChild("Ping")
-					if ping then
-						pingLabel.Text = "📡 Ping: " .. string.format("%.0f", ping.Value) .. "ms"
-					end
-				end
-				
-				lastUpdate = tick()
-			end
-			
-			RunService.Heartbeat:Wait()
-		end
-	]]
-	
-	monitorScript.Source = source
-	monitorScript.Parent = player
-end
-
--- 清理测试
-function AutoPerformanceTester:CleanupTest(player)
-	local testFolder = player:FindFirstChild("PerformanceTest")
-	if testFolder then
-		testFolder:Destroy()
-	end
-	
-	local monitorScript = player:FindFirstChild("PerformanceMonitor")
-	if monitorScript then
-		monitorScript:Destroy()
-	end
-	
-	local screenGui = player.PlayerGui:FindFirstChild("PerformanceDisplay")
-	if screenGui then
-		screenGui:Destroy()
-	end
-end
-
 -- 停止所有测试
 function AutoPerformanceTester:StopAllTests()
 	print("=== 停止所有性能测试 ===")
 	
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:CleanupTest(player)
-		
-		local fpsFolder = player:FindFirstChild("FPSMonitor")
-		if fpsFolder then
-			local fpsMonitor = fpsFolder:GetAttribute("FPSMonitor")
-			if fpsMonitor then
-				fpsMonitor:Stop()
-			end
-			fpsFolder:Destroy()
-		end
+	end
+	
+	-- 清理所有监控器
+	self.playerMonitors = {}
+end
+
+-- 清理测试
+function AutoPerformanceTester:CleanupTest(player)
+	-- 停止监控器
+	if self.playerMonitors[player] then
+		self.playerMonitors[player]:Stop()
+		self.playerMonitors[player] = nil
+	end
+	
+	-- 清理测试对象
+	local testFolder = player:FindFirstChild("PerformanceTest")
+	if testFolder then
+		testFolder:Destroy()
+	end
+	
+	-- 清理RemoteEvent
+	local remoteEvent = player:FindFirstChild("StartClientMonitoring")
+	if remoteEvent then
+		remoteEvent:Destroy()
 	end
 end
 
@@ -452,10 +318,11 @@ wait(1)
 -- 自动开始性能测试
 AutoPerformanceTester:StartAutoTest()
 
-wait(1000)
-AutoPerformanceTester:StopAllTests()
-
-print("等着卡爆吧，孩子")
-print("等着卡爆吧，孩子")
+-- 使用延迟调用而不是阻塞等待
+delay(1000, function()
+	AutoPerformanceTester:StopAllTests()
+	print("等着卡爆吧，孩子")
+	print("等着卡爆吧，孩子")
+end)
 
 return AutoPerformanceTester
