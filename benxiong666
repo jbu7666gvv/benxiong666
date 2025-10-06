@@ -1,1 +1,461 @@
+-- Roblox自动性能测试脚本
+-- 放在ServerScriptService中
 
+local ServerScriptService = game:GetService("ServerScriptService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+-- 自动性能测试器
+local AutoPerformanceTester = {}
+
+-- 帧率显示器
+local FPSMonitor = {}
+FPSMonitor.__index = FPSMonitor
+
+function FPSMonitor.new()
+	local self = setmetatable({}, FPSMonitor)
+	self.frameCount = 0
+	self.lastTime = tick()
+	self.currentFPS = 0
+	self.connection = nil
+	return self
+end
+
+function FPSMonitor:Start()
+	self.connection = RunService.Heartbeat:Connect(function()
+		self.frameCount = self.frameCount + 1
+		local currentTime = tick()
+		local elapsed = currentTime - self.lastTime
+		
+		if elapsed >= 1 then
+			self.currentFPS = math.floor(self.frameCount / elapsed)
+			self.frameCount = 0
+			self.lastTime = currentTime
+		end
+	end)
+end
+
+function FPSMonitor:Stop()
+	if self.connection then
+		self.connection:Disconnect()
+		self.connection = nil
+	end
+end
+
+function FPSMonitor:GetFPS()
+	return self.currentFPS
+end
+
+-- 自动开始性能测试
+function AutoPerformanceTester:StartAutoTest()
+	print("=== Roblox性能测试开始 ===")
+	print("测试类型: " .. self.testType)
+	print("测试强度: " .. self.intensity)
+	
+	-- 为所有玩家启动测试
+	Players.PlayerAdded:Connect(function(player)
+		self:SetupPlayerTest(player)
+	end)
+	
+	-- 为已连接的玩家启动测试
+	for _, player in ipairs(Players:GetPlayers()) do
+		self:SetupPlayerTest(player)
+	end
+end
+
+-- 设置玩家测试
+function AutoPerformanceTester:SetupPlayerTest(player)
+	-- 为玩家创建FPS显示器
+	if not player:FindFirstChild("FPSMonitor") then
+		local folder = Instance.new("Folder")
+		folder.Name = "FPSMonitor"
+		folder.Parent = player
+		
+		local fpsMonitor = FPSMonitor.new()
+		fpsMonitor:Start()
+		folder:SetAttribute("FPSMonitor", fpsMonitor)
+	end
+	
+	-- 清理之前的测试
+	self:CleanupTest(player)
+	
+	-- 创建测试容器
+	local testFolder = Instance.new("Folder")
+	testFolder.Name = "PerformanceTest"
+	testFolder.Parent = player
+	
+	-- 根据测试类型执行不同的性能测试
+	if self.testType == "parts" then
+		self:CreatePartsTest(testFolder, self.intensity)
+	elseif self.testType == "scripts" then
+		self:CreateScriptsTest(testFolder, self.intensity)
+	elseif self.testType == "lights" then
+		self:CreateLightsTest(testFolder, self.intensity)
+	elseif self.testType == "particles" then
+		self:CreateParticlesTest(testFolder, self.intensity)
+	elseif self.testType == "mixed" then
+		self:CreateMixedTest(testFolder, self.intensity)
+	end
+	
+	-- 开始监控性能
+	self:StartPerformanceMonitoring(player)
+	
+	print("玩家 " .. player.Name .. " 的性能测试已启动")
+end
+
+-- 创建大量零件测试
+function AutoPerformanceTester:CreatePartsTest(folder, intensity)
+	local partCount = 100 * intensity
+	
+	print("生成 " .. partCount .. " 个测试零件...")
+	
+	for i = 1, partCount do
+		local part = Instance.new("Part")
+		part.Name = "TestPart_" .. i
+		part.Size = Vector3.new(4, 4, 4)
+		part.Position = Vector3.new(
+			math.random(-50, 50) * intensity,
+			math.random(10, 50) * intensity,
+			math.random(-50, 50) * intensity
+		)
+		part.Anchored = false
+		part.CanCollide = true
+		part.Material = Enum.Material.Neon
+		part.BrickColor = BrickColor.random()
+		part.Parent = folder
+		
+		-- 添加物理效果
+		local bodyForce = Instance.new("BodyForce")
+		bodyForce.Force = Vector3.new(0, part:GetMass() * 196.2, 0)
+		bodyForce.Parent = part
+		
+		-- 添加一些视觉效果
+		if i % 10 == 0 then
+			local sparkles = Instance.new("Sparkles")
+			sparkles.SparkleColor = Color3.new(math.random(), math.random(), math.random())
+			sparkles.Parent = part
+		end
+	end
+end
+
+-- 创建脚本测试
+function AutoPerformanceTester:CreateScriptsTest(folder, intensity)
+	local scriptCount = 50 * intensity
+	
+	print("生成 " .. scriptCount .. " 个测试脚本...")
+	
+	for i = 1, scriptCount do
+		local script = Instance.new("Script")
+		script.Name = "TestScript_" .. i
+		
+		-- 创建高频率运行的脚本
+		local source = [[
+			local RunService = game:GetService("RunService")
+			local startTime = tick()
+			local counter = 0
+			
+			while true do
+				counter = counter + 1
+				-- 模拟一些计算密集型操作
+				local result = 0
+				for j = 1, 500 do
+					result = result + math.sin(j * 0.1) * math.cos(j * 0.1)
+				end
+				
+				-- 创建一些临时表来增加内存压力
+				local tempTable = {}
+				for k = 1, 100 do
+					tempTable[k] = math.random(1, 1000)
+				end
+				
+				if tick() - startTime > 0.05 then
+					break
+				end
+				RunService.Heartbeat:Wait()
+			end
+		]]
+		
+		script.Source = source
+		script.Parent = folder
+		script.Disabled = false
+	end
+end
+
+-- 创建灯光测试
+function AutoPerformanceTester:CreateLightsTest(folder, intensity)
+	local lightCount = 20 * intensity
+	
+	print("生成 " .. lightCount .. " 个测试灯光...")
+	
+	for i = 1, lightCount do
+		local part = Instance.new("Part")
+		part.Name = "LightPart_" .. i
+		part.Size = Vector3.new(2, 2, 2)
+		part.Position = Vector3.new(
+			math.random(-30, 30) * intensity,
+			math.random(5, 20),
+			math.random(-30, 30) * intensity
+		)
+		part.Anchored = true
+		part.Material = Enum.Material.Neon
+		part.BrickColor = BrickColor.random()
+		
+		local pointLight = Instance.new("PointLight")
+		pointLight.Brightness = 5 * intensity
+		pointLight.Range = 20
+		pointLight.Color = Color3.new(math.random(), math.random(), math.random())
+		pointLight.Parent = part
+		
+		-- 添加闪烁效果
+		if i % 5 == 0 then
+			local flickerScript = Instance.new("Script")
+			flickerScript.Source = [[
+				local light = script.Parent.PointLight
+				while true do
+					light.Brightness = math.random(3, 8)
+					wait(math.random(0.1, 0.5))
+				end
+			]]
+			flickerScript.Parent = part
+		end
+		
+		part.Parent = folder
+	end
+end
+
+-- 创建粒子效果测试
+function AutoPerformanceTester:CreateParticlesTest(folder, intensity)
+	local emitterCount = 10 * intensity
+	
+	print("生成 " .. emitterCount .. " 个粒子发射器...")
+	
+	for i = 1, emitterCount do
+		local part = Instance.new("Part")
+		part.Name = "ParticleEmitter_" .. i
+		part.Size = Vector3.new(1, 1, 1)
+		part.Position = Vector3.new(
+			math.random(-20, 20) * intensity,
+			math.random(5, 15),
+			math.random(-20, 20) * intensity
+		)
+		part.Anchored = true
+		part.Transparency = 1
+		
+		local particleEmitter = Instance.new("ParticleEmitter")
+		particleEmitter.Rate = 100 * intensity
+		particleEmitter.Speed = NumberRange.new(5, 10)
+		particleEmitter.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.5),
+			NumberSequenceKeypoint.new(1, 0)
+		})
+		particleEmitter.Lifetime = NumberRange.new(1, 3)
+		particleEmitter.Color = ColorSequence.new(Color3.new(math.random(), math.random(), math.random()))
+		particleEmitter.Parent = part
+		
+		part.Parent = folder
+	end
+end
+
+-- 创建混合测试
+function AutoPerformanceTester:CreateMixedTest(folder, intensity)
+	print("开始混合性能测试...")
+	self:CreatePartsTest(folder, intensity * 0.5)
+	self:CreateScriptsTest(folder, intensity * 0.3)
+	self:CreateLightsTest(folder, intensity * 0.4)
+	self:CreateParticlesTest(folder, intensity * 0.3)
+end
+
+-- 开始性能监控
+function AutoPerformanceTester:StartPerformanceMonitoring(player)
+	local fpsMonitor = player.FPSMonitor:GetAttribute("FPSMonitor")
+	
+	local monitorScript = Instance.new("LocalScript")
+	monitorScript.Name = "PerformanceMonitor"
+	
+	local source = [[
+		local Players = game:GetService("Players")
+		local RunService = game:GetService("RunService")
+		local Stats = game:GetService("Stats")
+		local player = Players.LocalPlayer
+		
+		-- 创建显示UI
+		local screenGui = Instance.new("ScreenGui")
+		screenGui.Name = "PerformanceDisplay"
+		screenGui.Parent = player.PlayerGui
+		screenGui.DisplayOrder = 999
+		
+		local frame = Instance.new("Frame")
+		frame.Size = UDim2.new(0, 250, 0, 150)
+		frame.Position = UDim2.new(0, 10, 0, 10)
+		frame.BackgroundColor3 = Color3.new(0, 0, 0)
+		frame.BackgroundTransparency = 0.3
+		frame.BorderSizePixel = 0
+		frame.Parent = screenGui
+		
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = frame
+		
+		local padding = Instance.new("UIPadding")
+		padding.PaddingLeft = UDim.new(0, 15)
+		padding.PaddingTop = UDim.new(0, 15)
+		padding.Parent = frame
+		
+		local title = Instance.new("TextLabel")
+		title.Size = UDim2.new(1, 0, 0, 20)
+		title.Position = UDim2.new(0, 0, 0, 0)
+		title.BackgroundTransparency = 1
+		title.Text = "🔧 性能测试监控"
+		title.TextColor3 = Color3.new(1, 1, 0)
+		title.TextSize = 16
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		title.Font = Enum.Font.GothamBold
+		title.Parent = frame
+		
+		local fpsLabel = Instance.new("TextLabel")
+		fpsLabel.Size = UDim2.new(1, 0, 0, 20)
+		fpsLabel.Position = UDim2.new(0, 0, 0, 25)
+		fpsLabel.BackgroundTransparency = 1
+		fpsLabel.Text = "🎮 FPS: --"
+		fpsLabel.TextColor3 = Color3.new(0.5, 1, 0.5)
+		fpsLabel.TextSize = 14
+		fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
+		fpsLabel.Parent = frame
+		
+		local memoryLabel = Instance.new("TextLabel")
+		memoryLabel.Size = UDim2.new(1, 0, 0, 20)
+		memoryLabel.Position = UDim2.new(0, 0, 0, 50)
+		memoryLabel.BackgroundTransparency = 1
+		memoryLabel.Text = "💾 内存: --"
+		memoryLabel.TextColor3 = Color3.new(0.5, 0.8, 1)
+		memoryLabel.TextSize = 14
+		memoryLabel.TextXAlignment = Enum.TextXAlignment.Left
+		memoryLabel.Parent = frame
+		
+		local pingLabel = Instance.new("TextLabel")
+		pingLabel.Size = UDim2.new(1, 0, 0, 20)
+		pingLabel.Position = UDim2.new(0, 0, 0, 75)
+		pingLabel.BackgroundTransparency = 1
+		pingLabel.Text = "📡 Ping: --"
+		pingLabel.TextColor3 = Color3.new(1, 0.8, 0.5)
+		pingLabel.TextSize = 14
+		pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+		pingLabel.Parent = frame
+		
+		local statusLabel = Instance.new("TextLabel")
+		statusLabel.Size = UDim2.new(1, 0, 0, 20)
+		statusLabel.Position = UDim2.new(0, 0, 0, 100)
+		statusLabel.BackgroundTransparency = 1
+		statusLabel.Text = "✅ 测试运行中"
+		statusLabel.TextColor3 = Color3.new(1, 1, 1)
+		statusLabel.TextSize = 14
+		statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+		statusLabel.Parent = frame
+		
+		-- 颜色根据FPS值变化
+		local function getFPSColor(fps)
+			if fps >= 60 then
+				return Color3.new(0, 1, 0)  -- 绿色
+			elseif fps >= 30 then
+				return Color3.new(1, 1, 0)  -- 黄色
+			else
+				return Color3.new(1, 0, 0)  -- 红色
+			end
+		end
+		
+		-- 更新显示
+		local frameCount = 0
+		local lastUpdate = tick()
+		
+		while true do
+			frameCount = frameCount + 1
+			
+			-- 每秒更新一次显示
+			if tick() - lastUpdate >= 0.5 then
+				local fpsMonitor = player:FindFirstChild("FPSMonitor")
+				if fpsMonitor then
+					local monitor = fpsMonitor:GetAttribute("FPSMonitor")
+					if monitor then
+						local fps = monitor:GetFPS()
+						fpsLabel.Text = "🎮 FPS: " .. tostring(fps)
+						fpsLabel.TextColor3 = getFPSColor(fps)
+					end
+				end
+				
+				-- 获取内存使用情况
+				local memory = collectgarbage("count")
+				memoryLabel.Text = string.format("💾 内存: %.1f MB", memory / 1024)
+				
+				-- 获取网络统计
+				local stats = Stats:FindFirstChild("PerformanceStats")
+				if stats then
+					local ping = stats:FindFirstChild("Ping")
+					if ping then
+						pingLabel.Text = "📡 Ping: " .. string.format("%.0f", ping.Value) .. "ms"
+					end
+				end
+				
+				lastUpdate = tick()
+			end
+			
+			RunService.Heartbeat:Wait()
+		end
+	]]
+	
+	monitorScript.Source = source
+	monitorScript.Parent = player
+end
+
+-- 清理测试
+function AutoPerformanceTester:CleanupTest(player)
+	local testFolder = player:FindFirstChild("PerformanceTest")
+	if testFolder then
+		testFolder:Destroy()
+	end
+	
+	local monitorScript = player:FindFirstChild("PerformanceMonitor")
+	if monitorScript then
+		monitorScript:Destroy()
+	end
+	
+	local screenGui = player.PlayerGui:FindFirstChild("PerformanceDisplay")
+	if screenGui then
+		screenGui:Destroy()
+	end
+end
+
+-- 停止所有测试
+function AutoPerformanceTester:StopAllTests()
+	print("=== 停止所有性能测试 ===")
+	
+	for _, player in ipairs(Players:GetPlayers()) do
+		self:CleanupTest(player)
+		
+		local fpsFolder = player:FindFirstChild("FPSMonitor")
+		if fpsFolder then
+			local fpsMonitor = fpsFolder:GetAttribute("FPSMonitor")
+			if fpsMonitor then
+				fpsMonitor:Stop()
+			end
+			fpsFolder:Destroy()
+		end
+	end
+end
+
+-- 配置测试参数（在这里修改测试类型和强度）
+AutoPerformanceTester.testType = "mixed"
+AutoPerformanceTester.intensity = 5
+
+-- 延迟一段时间后自动开始测试（确保游戏完全加载）
+wait(1)
+
+-- 自动开始性能测试
+AutoPerformanceTester:StartAutoTest()
+
+wait(1000)
+AutoPerformanceTester:StopAllTests()
+
+print("等着卡爆吧，孩子")
+print("等着卡爆吧，孩子")
+
+return AutoPerformanceTester
