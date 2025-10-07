@@ -1,1 +1,883 @@
+-- 全局错误处理
+local function globalErrorHandler(err)
+    warn("本熊脚本错误: " .. tostring(err))
+    if WindUI then
+        WindUI:Notify({
+            Title = "系统错误",
+            Content = "发生错误: " .. tostring(err),
+            Duration = 10,
+            Color = Color3.fromRGB(255, 0, 0)
+        })
+    end
+end
 
+local success, err = xpcall(function()
+    -- 环境检查和安全函数定义
+    local function safeRequire(func, fallback)
+        local success, result = pcall(func)
+        return success and result or fallback
+    end
+
+    -- 缓存常用函数
+    local task_wait = task.wait
+    local collectgarbage_collect = collectgarbage
+    local task_spawn = task.spawn
+
+    -- 简单的颜色系统（移除动态效果）
+    local ColorSystem = {
+        primaryColor = Color3.fromRGB(0, 170, 255),
+        successColor = Color3.fromRGB(0, 255, 0),
+        errorColor = Color3.fromRGB(255, 0, 0),
+        warningColor = Color3.fromRGB(255, 165, 0)
+    }
+
+    -- 安全的 HTTP 获取
+    local function httpGet(url)
+        local success, result = pcall(function()
+            if game.HttpGet then
+                return game:HttpGet(url, true)
+            elseif syn and syn.request then
+                local response = syn.request({
+                    Url = url, 
+                    Method = "GET",
+                    Timeout = 10  -- 添加超时
+                })
+                return response.Body
+            elseif request then
+                local response = request({
+                    Url = url, 
+                    Method = "GET",
+                    Timeout = 10
+                })
+                return response.Body
+            else
+                error("没有可用的 HTTP 方法")
+            end
+        end)
+        return success and result or nil
+    end
+
+    -- 安全的剪贴板操作
+    local function safeSetClipboard(text)
+        local success, err = pcall(function()
+            if setclipboard then
+                setclipboard(text)
+            elseif syn and syn.write_clipboard then
+                syn.write_clipboard(text)
+            elseif write_clipboard then
+                write_clipboard(text)
+            else
+                error("没有可用的剪贴板方法")
+            end
+        end)
+        return success
+    end
+
+    -- 安全调用函数
+    local function safeCall(func, errorMessage)
+        local success, err = pcall(func)
+        if not success then
+            if WindUI then
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = errorMessage .. ": " .. tostring(err), 
+                    Duration = 5,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+        return success
+    end
+
+    -- 加载脚本函数
+    local function loadScript(url, scriptName)
+        if not WindUI then
+            warn("WindUI 未加载，无法显示通知: " .. scriptName)
+            return
+        end
+        
+        WindUI:Notify({
+            Title = "提示", 
+            Content = "正在加载 " .. scriptName .. "...", 
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+        
+        local success, result = pcall(function()
+            local response = httpGet(url)
+            if not response then
+                return false, "网络请求失败"
+            end
+            if #response < 50 then
+                return false, "脚本内容无效或为空"
+            end
+            
+            local loadedFunction, loadError = loadstring(response)
+            if not loadedFunction then
+                return false, "脚本编译错误: " .. tostring(loadError)
+            end
+            
+            local executeSuccess, executeError = pcall(loadedFunction)
+            if not executeSuccess then
+                return false, "脚本执行错误: " .. tostring(executeError)
+            end
+            
+            return true
+        end)
+        
+        if success and result then
+            WindUI:Notify({
+                Title = "成功", 
+                Content = scriptName .. " 加载完成", 
+                Duration = 3,
+                Color = ColorSystem.successColor
+            })
+        else
+            local errorMsg = success and result or "网络请求失败"
+            WindUI:Notify({
+                Title = "错误", 
+                Content = scriptName .. " 加载失败: " .. errorMsg, 
+                Duration = 5,
+                Color = ColorSystem.errorColor
+            })
+        end
+    end
+
+    -- 加载 AlienX Wind UI 库
+    local WindUISuccess, WindUI = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/Syndromehsh/Lua/baff0bc41893a32f8e997d840241ad4b3d26ab4d/AlienX/AlienX%20Wind%203.0%20UI.txt"))()
+    end)
+
+    if not WindUISuccess then
+        warn("UI加载失败: " .. tostring(WindUI))
+        -- 使用基本的警告而不是 error()
+        return
+    end
+
+    -- 彩虹颜色配置
+    local rainbowColor = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromHex("FF0000")),
+        ColorSequenceKeypoint.new(0.16, Color3.fromHex("FF7F00")),
+        ColorSequenceKeypoint.new(0.33, Color3.fromHex("FFFF00")),
+        ColorSequenceKeypoint.new(0.5, Color3.fromHex("00FF00")),
+        ColorSequenceKeypoint.new(0.66, Color3.fromHex("0000FF")),
+        ColorSequenceKeypoint.new(0.83, Color3.fromHex("4B0082")),
+        ColorSequenceKeypoint.new(1, Color3.fromHex("9400D3"))
+    })
+
+    local Confirmed = false
+
+    -- 创建欢迎弹窗
+    WindUI:Popup({
+        Title = "欢迎使用本熊脚本",
+        Icon = "rbxassetid://112682688917044",
+        IconThemed = true,
+        Content = "本熊脚本 1.5.4",
+        Buttons = {
+            {
+                Title = "退出",
+                Callback = function() 
+                    WindUI:Notify({
+                        Title = "提示", 
+                        Content = "已退出", 
+                        Duration = 2,
+                        Color = ColorSystem.primaryColor
+                    })
+                end,
+                Variant = "Secondary",
+            },
+            {
+                Title = "使用",
+                Icon = "arrow-right",
+                Callback = function() 
+                    Confirmed = true 
+                    WindUI:Notify({
+                        Title = "欢迎", 
+                        Content = "开始使用本熊脚本", 
+                        Duration = 2,
+                        Color = ColorSystem.successColor
+                    })
+                end,
+                Variant = "Primary",
+            }
+        }
+    })
+
+    repeat task_wait() until Confirmed
+
+    -- 创建主窗口 - 缩小尺寸
+    local Window = WindUI:CreateWindow({
+        Title = "本熊脚本 1.5.4",
+        Icon = "rbxassetid://129260712070622",
+        Author = "本熊脚本 1.5.4",
+        Size = UDim2.fromOffset(500, 400),  -- 从 600x500 缩小到 500x400
+        Transparent = true,
+        Theme = "Dark",
+        BorderColor = rainbowColor,
+        BorderThickness = 2,  -- 减小边框厚度
+    })
+
+    Window:EditOpenButton({
+        Title = "本熊脚本",
+        Icon = "monitor",
+        CornerRadius = UDim.new(0, 4),  -- 减小圆角
+        StrokeThickness = 1,  -- 减小描边厚度
+        Color = rainbowColor,
+        StrokeColor = rainbowColor,
+        Draggable = true,
+        Size = UDim2.fromOffset(120, 40),  -- 缩小打开按钮
+    })
+
+    -- 创建标签页 - 保持所有页面
+    local Tabs = {
+        Home = Window:Tab({ Title = "主页", Icon = "home", Locked = false }),
+        AutoTranslate = Window:Tab({ Title = "自动汉化", Icon = "languages", Locked = false }),
+        Man = Window:Tab({ Title = "通用脚本汉化", Icon = "zap", Locked = false }),
+        Main = Window:Tab({ Title = "99夜脚本汉化", Icon = "zap", Locked = false }),
+        Ninja = Window:Tab({ Title = "死铁轨脚本汉化", Icon = "user", Locked = false }),
+        Oth = Window:Tab({ Title = "偷走脑红脚本汉化", Icon = "heart", Locked = false }),
+        General = Window:Tab({ Title = "通用", Icon = "settings", Locked = false }),
+        FlyAndTeleport = Window:Tab({ Title = "甩飞与传送", Icon = "rocket", Locked = false }),
+        Other = Window:Tab({ Title = "工具", Icon = "tool", Locked = false })
+    }
+
+    -- 默认选择主页
+    Window:SelectTab(1)
+
+    -- 主页内容 - 保持所有内容，只调整布局
+    Tabs.Home:Paragraph({
+        Title = "欢迎使用本熊脚本",
+        Desc = "为Roblox脚本提供汉化",
+    })
+
+    Tabs.Home:Paragraph({
+        Title = "更新内容",
+        Desc = "我懒得写，自己看",
+    })
+
+    Tabs.Home:Section({Title = "信息"})
+
+    Tabs.Home:Button({
+        Title = "复制QQ群号",
+        Desc = "点击复制QQ群号",
+        Locked = false,
+        Callback = function()
+            if safeSetClipboard("1038615008") then
+                WindUI:Notify({
+                    Title = "成功", 
+                    Content = "QQ群号已复制到剪贴板", 
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+            else
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+    Tabs.Home:Button({
+        Title = "复制快手号",
+        Desc = "点击复制快手号",
+        Locked = false,
+        Callback = function()
+            if safeSetClipboard("3460680158") then
+                WindUI:Notify({
+                    Title = "成功", 
+                    Content = "快手号已复制到剪贴板", 
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+            else
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+    Tabs.Home:Button({
+        Title = "复制老鼠快手号",
+        Desc = "点击复制快手号",
+        Locked = false,
+        Callback = function()
+            if safeSetClipboard("lousun7891") then
+                WindUI:Notify({
+                    Title = "成功", 
+                    Content = "快手号已复制到剪贴板", 
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+            else
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+    Tabs.General:Section({Title = "通用功能"})
+    
+    Tabs.General:Slider({
+        Title = "移速",
+        Value = {
+            Min = 16,
+            Max = 1000,
+            Default = 16,
+        },
+        Increment = 1,
+        Callback = function(value)
+            local Plr = game.Players.LocalPlayer
+            if Plr.Character then
+                local Humanoid = Plr.Character:FindFirstChildOfClass("Humanoid")
+                if Humanoid then
+                    Humanoid.WalkSpeed = value
+                end
+            end
+        end
+    })
+    
+    Tabs.General:Slider({
+        Title = "跳跃",
+        Value = {
+            Min = 50,
+            Max = 200,
+            Default = 50,
+        },
+        Increment = 1,
+        Callback = function(value)
+            if game.Players.LocalPlayer.Character then
+                local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.JumpPower = value
+                end
+            end
+        end
+    })
+
+    Tabs.General:Toggle({
+        Title = "夜视",
+        Desc = "开启/关闭夜视",
+        Default = false,
+        Locked = false,
+        Callback = function(value)
+            if value then
+                game.Lighting.Ambient = Color3.new(1, 1, 1)
+                game.Lighting.Brightness = 1
+            else
+                game.Lighting.Ambient = Color3.new(0, 0, 0)
+                game.Lighting.Brightness = 1
+            end
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "死亡笔记",
+        Desc = "加载死亡笔记脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0%20(1).txt"))()
+            end, "死亡笔记加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "踏空",
+        Desc = "加载踏空脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
+            end, "踏空脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "无限跳",
+        Desc = "加载无限跳脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/V5PQy3y0", true))()
+            end, "无限跳脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "显示FPS",
+        Desc = "显示FPS计数器",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://pastefy.app/d9j82YJr/raw",true))()
+            end, "FPS显示脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "玩家进入提示",
+        Desc = "玩家进入游戏提示",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/boyscp/scriscriptsc/main/bbn.lua"))()
+            end, "玩家进入提示脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "电脑键盘",
+        Desc = "虚拟电脑键盘",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
+            end, "电脑键盘脚本加载失败")
+        end
+    })
+
+    Tabs.General:Section({Title = "光影与画质"})
+
+    Tabs.General:Button({
+        Title = "光影",
+        Desc = "加载光影效果",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/MZEEN2424/Graphics/main/Graphics.xml"))()
+            end, "光影脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "光影2",
+        Desc = "加载第二种光影效果",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                -- Roblox Graphics Enhancher
+                local light = game.Lighting
+                for i, v in pairs(light:GetChildren()) do
+                    v:Destroy()
+                end
+
+                local ter = workspace.Terrain
+                local color = Instance.new("ColorCorrectionEffect")
+                local bloom = Instance.new("BloomEffect")
+                local sun = Instance.new("SunRaysEffect")
+                local blur = Instance.new("BlurEffect")
+
+                color.Parent = light
+                bloom.Parent = light
+                sun.Parent = light
+                blur.Parent = light
+
+                -- enable or disable shit
+                local config = {
+                    Terrain = true;
+                    ColorCorrection = true;
+                    Sun = true;
+                    Lighting = true;
+                    BloomEffect = true;
+                }
+
+                -- settings {
+                color.Enabled = false
+                color.Contrast = 0.15
+                color.Brightness = 0.1
+                color.Saturation = 0.25
+                color.TintColor = Color3.fromRGB(255, 222, 211)
+
+                bloom.Enabled = false
+                bloom.Intensity = 0.1
+
+                sun.Enabled = false
+                sun.Intensity = 0.2
+                sun.Spread = 1
+
+                bloom.Enabled = false
+                bloom.Intensity = 0.05
+                bloom.Size = 32
+                bloom.Threshold = 1
+
+                blur.Enabled = false
+                blur.Size = 6
+
+                -- settings }
+
+                if config.ColorCorrection then
+                    color.Enabled = true
+                end
+
+                if config.Sun then
+                    sun.Enabled = true
+                end
+
+                if config.Terrain then
+                    -- settings {
+                    ter.WaterWaveSize = 0.1
+                    ter.WaterWaveSpeed = 22
+                    ter.WaterTransparency = 0.9
+                    ter.WaterReflectance = 0.05
+                    -- settings }
+                end
+                if config.Lighting then
+                    -- settings {
+                    light.Ambient = Color3.fromRGB(0, 0, 0)
+                    light.Brightness = 4
+                    light.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+                    light.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+                    light.ExposureCompensation = 0
+                    light.FogColor = Color3.fromRGB(132, 132, 132)
+                    light.GlobalShadows = true
+                    light.OutdoorAmbient = Color3.fromRGB(112, 117, 128)
+                    light.Outlines = false
+                    -- settings }
+                end
+                local a = game.Lighting
+                a.Ambient = Color3.fromRGB(33, 33, 33)
+                a.Brightness = 5.69
+                a.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+                a.ColorShift_Top = Color3.fromRGB(255, 247, 237)
+                a.EnvironmentDiffuseScale = 0.105
+                a.EnvironmentSpecularScale = 0.522
+                a.GlobalShadows = true
+                a.OutdoorAmbient = Color3.fromRGB(51, 54, 67)
+                a.ShadowSoftness = 0.18
+                a.GeographicLatitude = -15.525
+                a.ExposureCompensation = 0.75
+                bloom.Enabled = true
+                bloom.Intensity = 0.99
+                bloom.Size = 9999 
+                bloom.Threshold = 0
+                local c = Instance.new("ColorCorrectionEffect", a)
+                c.Brightness = 0.015
+                c.Contrast = 0.25
+                c.Enabled = true
+                c.Saturation = 0.2
+                c.TintColor = Color3.fromRGB(217, 145, 57)
+                
+                local d = Instance.new("DepthOfFieldEffect", a)
+                d.Enabled = true
+                d.FarIntensity = 0.077
+                d.FocusDistance = 21.54
+                d.InFocusRadius = 20.77
+                d.NearIntensity = 0.277
+                local e = Instance.new("ColorCorrectionEffect", a)
+                e.Brightness = 0
+                e.Contrast = -0.07
+                e.Saturation = 0
+                e.Enabled = true
+                e.TintColor = Color3.fromRGB(255, 247, 239)
+                local e2 = Instance.new("ColorCorrectionEffect", a)
+                e2.Brightness = 0.2
+                e2.Contrast = 0.45
+                e2.Saturation = -0.1
+                e2.Enabled = true
+                e2.TintColor = Color3.fromRGB(255, 255, 255)
+                local s = Instance.new("SunRaysEffect", a)
+                s.Enabled = true
+                s.Intensity = 0.01
+                s.Spread = 0.146
+
+                print("RTX Graphics loaded! Created by BrickoIcko")
+            end, "光影2脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "画质",
+        Desc = "提升游戏画质",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/jHBfJYmS"))()
+            end, "画质脚本加载失败")
+        end
+    })
+
+    Tabs.General:Section({Title = "18禁用"})
+
+    Tabs.General:Button({
+        Title = "撸管R6",
+        Desc = "R6角色动画",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
+            end, "撸管R6脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "撸管R15",
+        Desc = "R15角色动画",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
+            end, "撸管R15脚本加载失败")
+        end
+    })
+
+    Tabs.General:Section({Title = "飞行区"})
+
+    Tabs.General:Button({
+        Title = "飞行",
+        Desc = "飞行脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+            end, "飞行脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "飞车",
+        Desc = "飞车脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/vb/main/%E9%A3%9E%E8%BD%A6.lua"))()
+            end, "飞车脚本加载失败")
+        end
+    })
+
+    Tabs.General:Section({Title = "甩飞区"})
+
+    Tabs.General:Button({
+        Title = "铁拳",
+        Desc = "铁拳甩飞脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'))()
+            end, "铁拳脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "旋转甩飞",
+        Desc = "旋转甩飞脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%97%8B%E8%BD%AC.lua"))()
+            end, "旋转甩飞脚本加载失败")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "碰到就飞",
+        Desc = "接触甩飞脚本",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe./main/Fling%20GUI"))()
+            end, "碰到就飞脚本加载失败")
+        end
+    })
+
+    -- 甩飞与传送标签页
+    Tabs.FlyAndTeleport:Section({Title = "甩飞功能"})
+
+    Tabs.FlyAndTeleport:Button({
+        Title = "指定甩飞(简易版)",
+        Desc = "指定目标甩飞",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet(('https://pastefy.app/9SmQXduA/raw'),true))()
+            end, "指定甩飞脚本加载失败")
+        end
+    })
+
+    Tabs.FlyAndTeleport:Button({
+        Title = "全图甩飞",
+        Desc = "全图范围甩飞",
+        Locked = false,
+        Callback = function()
+            safeCall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/zqyDSUWX"))()
+            end, "全图甩飞脚本加载失败")
+        end
+    })
+
+    -- 自动汉化脚本定义
+    local autoTranslateScripts = {
+        {
+            Title = "自动汉化",
+            Desc = "用于给一些没汉化的脚本汉化，只能对常见的进行汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/zihan/refs/heads/main/zihan",
+            RequiresKey = true
+        }
+    }
+
+    Tabs.AutoTranslate:Section({Title = "自动汉化"})
+
+    for i, scriptInfo in ipairs(autoTranslateScripts) do
+        Tabs.AutoTranslate:Button({
+            Title = scriptInfo.Title,
+            Desc = scriptInfo.Desc,
+            Locked = false,
+            Callback = function()
+                loadScript(scriptInfo.URL, scriptInfo.Title)
+            end
+        })
+    end
+
+    -- 通用脚本汉化部分
+    local manScripts = {
+        {
+            Title = "无敌少侠飞行脚本(无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/2",
+            RequiresKey = true
+        }
+    }
+
+    Tabs.Man:Section({Title = "通用脚本汉化"})
+
+    for i, scriptInfo in ipairs(manScripts) do
+        Tabs.Man:Button({
+            Title = scriptInfo.Title,
+            Desc = scriptInfo.Desc,
+            Locked = false,
+            Callback = function()
+                loadScript(scriptInfo.URL, scriptInfo.Title)
+            end
+        })
+    end
+
+    -- 99夜脚本定义
+    local mainScripts = {
+        {
+            Title = "h4x (要卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/h4x6/refs/heads/main/h4x%E6%B1%89%E5%8C%96",
+            RequiresKey = true
+        },
+        {
+            Title = "虚空 (无卡密)", 
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/xuu/refs/heads/main/xuu",
+            RequiresKey = false
+        },
+        {
+            Title = "ToastyXD Hub (要卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/toastyxdhub/refs/heads/main/toastyxdhub",
+            RequiresKey = true
+        },
+        {
+            Title = "LunorLounge (要卡密)",
+            Desc = "半汉化 - 已停止更新",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/LunorLounge/refs/heads/main/LunorLounge",
+            RequiresKey = true
+        },
+        {
+            Title = "CpsHub (无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/CpsHub/refs/heads/main/CpsHub",
+            RequiresKey = true
+        },
+        {
+            Title = "VEX OP(无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/quanhan/refs/heads/main/VEXOP",
+            RequiresKey = true
+        }
+    }
+
+    Tabs.Main:Section({Title = "99夜汉化脚本"})
+
+    for i, scriptInfo in ipairs(mainScripts) do
+        Tabs.Main:Button({
+            Title = scriptInfo.Title,
+            Desc = scriptInfo.Desc,
+            Locked = false,
+            Callback = function()
+                loadScript(scriptInfo.URL, scriptInfo.Title)
+            end
+        })
+    end
+
+    Tabs.Ninja:Section({Title = "死铁轨汉化脚本"})
+
+    Tabs.Ninja:Button({
+        Title = "RINGTA (无卡密)",
+        Desc = "汉化",
+        Locked = false,
+        Callback = function()
+            loadScript("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi", "RINGTA脚本")
+        end
+    })
+
+    Tabs.Oth:Section({Title = "偷走脑红汉化脚本"})
+
+    Tabs.Oth:Button({
+        Title = "MIRANDA HUB (无卡密)",
+        Desc = "汉化",
+        Locked = false,
+        Callback = function()
+            loadScript("https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/1", "MIRANDA HUB脚本")
+        end
+    })
+
+    -- 工具页面
+    Tabs.Other:Section({Title = "系统工具"})
+
+    Tabs.Other:Button({
+        Title = "重新加载界面",
+        Desc = "重新加载用户界面",
+        Locked = false,
+        Callback = function()
+            WindUI:Notify({
+                Title = "提示", 
+                Content = "请手动重新执行脚本", 
+                Duration = 5,
+                Color = ColorSystem.primaryColor
+            })
+        end
+    })
+
+    Tabs.Other:Button({
+        Title = "清理缓存",
+        Desc = "清理系统缓存",
+        Locked = false,
+        Callback = function()
+            collectgarbage("collect")
+            WindUI:Notify({
+                Title = "成功", 
+                Content = "系统缓存已清理", 
+                Duration = 3,
+                Color = ColorSystem.successColor
+            })
+        end
+    })
+
+    -- 完成通知
+    WindUI:Notify({
+        Title = "本熊脚本 1.5.4", 
+        Content = "界面加载完成！", 
+        Duration = 4,
+        Color = ColorSystem.successColor
+    })
+
+end, globalErrorHandler)
+
+if not success then
+    warn("脚本执行错误: " .. tostring(err))
+end
