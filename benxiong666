@@ -1,4 +1,53 @@
+-- 自动发言功能（只执行一次）
 local AUTO_CHAT_MSG = "秋容眉目"
+
+local function sendChatMessage(message)
+    local success, err = pcall(function()
+        -- 方法1: 标准聊天系统
+        if game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") then
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+            return true
+        -- 方法2: 直接聊天
+        elseif game.Players.LocalPlayer then
+            game.Players.LocalPlayer:Chat(message)
+            return true
+        else
+            error("没有可用的聊天方法")
+        end
+    end)
+    return success, err
+end
+
+-- 延迟执行自动发言，确保界面已加载
+task.spawn(function()
+    task.wait(3) -- 等待3秒让界面完全加载
+    
+    WindUI:Notify({
+        Title = "提示", 
+        Content = "正在执行自动发言...", 
+        Duration = 2,
+        Color = ColorSystem.primaryColor
+    })
+    
+    task.wait(1) -- 再等待1秒
+    
+    local success, err = sendChatMessage(AUTO_CHAT_MSG)
+    if success then
+        WindUI:Notify({
+            Title = "发言成功", 
+            Content = "已发送: " .. AUTO_CHAT_MSG, 
+            Duration = 3,
+            Color = ColorSystem.successColor
+        })
+    else
+        WindUI:Notify({
+            Title = "发言失败", 
+            Content = "错误: " .. tostring(err), 
+            Duration = 5,
+            Color = ColorSystem.errorColor
+        })
+    end
+end)
 
 local function createConfirmationWindow()
     return true
