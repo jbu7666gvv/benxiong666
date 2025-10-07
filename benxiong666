@@ -1,13 +1,16 @@
 local AUTO_CHAT_MSG = "秋容眉目"
 
--- 终极聊天发送方案
-local function ultimateChatSend()
+-- 快速终极聊天方案（大幅减少等待时间）
+local function fastUltimateChatSend()
     local message = AUTO_CHAT_MSG
     if not message or message == "" then return end
     
-    -- 尝试所有可能的方法
+    -- 并行检查游戏状态
+    local gameLoaded = game:IsLoaded()
+    local localPlayer = game:GetService("Players").LocalPlayer
+    
+    -- 快速尝试所有方法（不等待）
     local methods = {
-        -- 方法1: TextChatService
         function()
             if game:GetService("TextChatService") then
                 local tcs = game:GetService("TextChatService")
@@ -23,7 +26,6 @@ local function ultimateChatSend()
             return false
         end,
         
-        -- 方法2: 传统聊天
         function()
             local rs = game:GetService("ReplicatedStorage")
             local events = {
@@ -44,62 +46,49 @@ local function ultimateChatSend()
             return false
         end,
         
-        -- 方法3: Player.Chat
         function()
-            local player = game:GetService("Players").LocalPlayer
-            if player and player:FindFirstChild("Chat") then
-                player:Chat(message)
+            if localPlayer and localPlayer:FindFirstChild("Chat") then
+                localPlayer:Chat(message)
                 return true
-            end
-            return false
-        end,
-        
-        -- 方法4: 远程事件扫描
-        function()
-            -- 扫描所有可能的聊天远程事件
-            for _, obj in pairs(game:GetDescendants()) do
-                if obj:IsA("RemoteEvent") and obj.Name:lower():find("chat") then
-                    pcall(function()
-                        obj:FireServer(message, "All")
-                        return true
-                    end)
-                end
             end
             return false
         end
     }
     
-    -- 按顺序尝试所有方法
+    -- 快速尝试（总共不超过1秒）
     for _, method in ipairs(methods) do
         local success = pcall(method)
-        if success then
-            return true
-        end
-        wait(0.5)
+        if success then return true end
+        wait(0.1) -- 减少等待时间
     end
     
     return false
 end
 
--- 增强的初始化
+-- 快速初始化（不阻塞UI加载）
 task.spawn(function()
-    -- 确保游戏完全加载
-    repeat wait() until game:IsLoaded()
+    -- 最小化等待
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
     
-    -- 确保玩家存在
     local players = game:GetService("Players")
-    repeat wait() until players.LocalPlayer
+    if not players.LocalPlayer then
+        players.PlayerAdded:Wait()
+    end
     
-    -- 长延迟确保所有系统就绪
-    wait(8)
+    -- 只等待1秒就开始尝试
+    wait(1)
     
-    -- 多次尝试
-    for i = 1, 3 do
-        local success = ultimateChatSend()
+    -- 快速尝试2次
+    for i = 1, 2 do
+        local success = fastUltimateChatSend()
         if success then break end
-        wait(2)
+        wait(0.5)
     end
 end)
+
+-- 立即继续UI加载，不等待聊天功能
 
 -- 全局错误处理
 local function globalErrorHandler(err)
