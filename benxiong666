@@ -338,7 +338,7 @@ local success, err = xpcall(function()
 
     Tabs.General:Section({Title = "通用功能"})
     
-    GeneralTab_Alien:Slider({
+    Tabs.General:Slider({
     Title = "移速",
     Value = {
         Min = 16,
@@ -356,7 +356,7 @@ local success, err = xpcall(function()
         end
     end
 })
-GeneralTab_Alien:Slider({
+    Tabs.General:Slider({
     Title = "跳跃",
     Value = {
         Min = 50,
