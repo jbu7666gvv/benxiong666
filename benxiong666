@@ -181,7 +181,7 @@ local success, err = xpcall(function()
         Title = "欢迎使用本熊脚本",
         Icon = "rbxassetid://112682688917044",
         IconThemed = true,
-        Content = "本熊脚本 1.5.7",
+        Content = "本熊脚本 1.5.4",
         Buttons = {
             {
                 Title = "退出",
@@ -216,9 +216,9 @@ local success, err = xpcall(function()
 
     -- 创建主窗口 - 缩小尺寸
     local Window = WindUI:CreateWindow({
-        Title = "本熊脚本 1.5.7",
+        Title = "本熊脚本 1.5.4",
         Icon = "rbxassetid://129260712070622",
-        Author = "本熊脚本 1.5.7",
+        Author = "本熊脚本 1.5.4",
         Size = UDim2.fromOffset(500, 400),  -- 从 600x500 缩小到 500x400
         Transparent = true,
         Theme = "Dark",
@@ -240,6 +240,7 @@ local success, err = xpcall(function()
     -- 创建标签页 - 保持所有页面
     local Tabs = {
         Home = Window:Tab({ Title = "主页", Icon = "home", Locked = false }),
+        KeyManager = Window:Tab({ Title = "密钥管理", Icon = "key", Locked = false }),
         AutoTranslate = Window:Tab({ Title = "自动汉化", Icon = "languages", Locked = false }),
         Man = Window:Tab({ Title = "通用脚本汉化", Icon = "zap", Locked = false }),
         Main = Window:Tab({ Title = "99夜脚本汉化", Icon = "zap", Locked = false }),
@@ -337,7 +338,7 @@ local success, err = xpcall(function()
 
     Tabs.General:Section({Title = "通用功能"})
     
-    Tabs.General:Slider({
+    GeneralTab_Alien:Slider({
     Title = "移速",
     Value = {
         Min = 16,
@@ -355,7 +356,7 @@ local success, err = xpcall(function()
         end
     end
 })
-    Tabs.General:Slider({
+GeneralTab_Alien:Slider({
     Title = "跳跃",
     Value = {
         Min = 50,
@@ -687,6 +688,23 @@ local success, err = xpcall(function()
         end
     })
 
+    -- 密钥管理页面
+    Tabs.KeyManager:Section({Title = "密钥状态"})
+
+    Tabs.KeyManager:Button({
+        Title = "重新验证密钥",
+        Desc = "重新验证密钥有效性",
+        Locked = false,
+        Callback = function()
+            WindUI:Notify({
+                Title = "密钥验证", 
+                Content = "正在重新验证密钥...", 
+                Duration = 2,
+                Color = ColorSystem.primaryColor
+            })
+        end
+    })
+
     Tabs.KeyManager:Button({
         Title = "清除已保存密钥",
         Desc = "清除本地保存的密钥",
@@ -863,7 +881,7 @@ local success, err = xpcall(function()
 
     -- 完成通知
     WindUI:Notify({
-        Title = "本熊脚本 1.5.7", 
+        Title = "本熊脚本 1.5.4", 
         Content = "界面加载完成！", 
         Duration = 4,
         Color = ColorSystem.successColor
