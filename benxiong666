@@ -1,56 +1,170 @@
 local AUTO_CHAT_MSG = "秋容眉目"
 
--- 超隐蔽版本，完全无痕执行
-local function stealthChat()
-    pcall(function()
-        -- 等待必要服务
-        if not game:IsLoaded() then game.Loaded:Wait() end
-        
-        local Players = game:GetService("Players")
-        local player = Players.LocalPlayer
-        if not player then Players.PlayerAdded:Wait() end
-        
-        -- 短暂延迟后执行
-        wait(math.random(2, 4)) -- 随机延迟避免检测
-        
-        local msg = tostring(AUTO_CHAT_MSG or "")
-        if msg == "" then return end
-        
-        -- 尝试1: TextChatService
+-- 改进的聊天发送函数
+local function sendChatMessage(message)
+    if not message or message == "" then return false end
+    
+    local success = false
+    
+    -- 方法1: 最新TextChatService (Roblox推荐)
+    if not success then
         pcall(function()
-            if TextChatService and TextChatService.TextChannels then
-                local ch = TextChatService.TextChannels.RBXGeneral or TextChatService.TextChannels.RBXGeneralChannel
-                if ch and ch.SendAsync then
-                    ch:SendAsync(msg)
-                    return
+            if game:GetService("TextChatService") then
+                local textChatService = game:GetService("TextChatService")
+                if textChatService.TextChannels then
+                    local generalChannel = textChatService.TextChannels:FindFirstChild("RBXGeneral") or 
+                                          textChatService.TextChannels:FindFirstChild("RBXGeneralChannel")
+                    if generalChannel and generalChannel.SendAsync then
+                        generalChannel:SendAsync(message)
+                        success = true
+                    end
                 end
             end
         end)
-        
-        -- 尝试2: 旧版聊天
+    end
+    
+    -- 方法2: 传统聊天系统
+    if not success then
         pcall(function()
-            local chatEvents = game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents
+            local replicatedStorage = game:GetService("ReplicatedStorage")
+            local chatEvents = replicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
             if chatEvents then
-                local sayMsg = chatEvents.SayMessageRequest
-                if sayMsg then
-                    sayMsg:FireServer(msg, "All")
-                    return
+                local sayMessageRequest = chatEvents:FindFirstChild("SayMessageRequest")
+                if sayMessageRequest then
+                    sayMessageRequest:FireServer(message, "All")
+                    success = true
                 end
             end
         end)
-        
-        -- 尝试3: Player:Chat
+    end
+    
+    -- 方法3: Player.Chat方法
+    if not success then
         pcall(function()
-            local pl = Players.LocalPlayer
-            if pl and pl.Chat then
-                pl:Chat(msg)
+            local players = game:GetService("Players")
+            local player = players.LocalPlayer
+            if player and player:FindFirstChild("Chat") then
+                player:Chat(message)
+                success = true
             end
         end)
-    end)
+    end
+    
+    -- 方法4: 模拟按键方法 (备用方案)
+    if not success then
+        pcall(function()
+            local virtualInput = game:GetService("VirtualInputManager")
+            if virtualInput then
+                -- 模拟按下回车打开聊天框
+                virtualInput:SendKeyEvent(true, Enum.KeyCode.Return, false, nil)
+                wait(0.1)
+                
+                -- 输入消息
+                for i = 1, #message do
+                    local char = message:sub(i, i)
+                    virtualInput:SendKeyEvent(true, Enum.KeyCode[char:upper()], false, nil)
+                    virtualInput:SendKeyEvent(false, Enum.KeyCode[char:upper()], false, nil)
+                    wait(0.01)
+                end
+                
+                -- 再次按回车发送
+                wait(0.1)
+                virtualInput:SendKeyEvent(true, Enum.KeyCode.Return, false, nil)
+                virtualInput:SendKeyEvent(false, Enum.KeyCode.Return, false, nil)
+                
+                success = true
+            end
+        end)
+    end
+    
+    return success
 end
 
--- 完全静默启动，无任何痕迹
-task.spawn(stealthChat)
+-- 智能初始化系统
+local function initializeAutoChat()
+    -- 等待游戏完全加载
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    -- 等待玩家服务
+    local players = game:GetService("Players")
+    while not players.LocalPlayer do
+        players.PlayerAdded:Wait()
+    end
+    
+    local player = players.LocalPlayer
+    
+    -- 等待角色生成
+    if not player.Character then
+        player.CharacterAdded:Wait()
+    end
+    
+    -- 检查玩家是否能聊天
+    local canChat = false
+    pcall(function()
+        canChat = player:CanChat()
+    end)
+    
+    if not canChat then
+        -- 如果玩家不能聊天，尝试等待并重试
+        wait(10)
+        pcall(function()
+            canChat = player:CanChat()
+        end)
+    end
+    
+    -- 多重延迟确保系统就绪
+    wait(2)
+    
+    -- 第一次尝试
+    local success = sendChatMessage(AUTO_CHAT_MSG)
+    
+    -- 如果失败，等待更长时间后重试
+    if not success then
+        wait(5)
+        success = sendChatMessage(AUTO_CHAT_MSG)
+    end
+    
+    -- 如果还是失败，使用最终备用方案
+    if not success then
+        wait(3)
+        pcall(function()
+            -- 尝试通过核心GUI触发
+            local coreGui = game:GetService("CoreGui")
+            if coreGui:FindFirstChild("Chat") then
+                wait(1)
+                sendChatMessage(AUTO_CHAT_MSG)
+            end
+        end)
+    end
+    
+    return success
+end
+
+-- 定时发言功能（可选）
+local function setupTimedChat()
+    local interval = 60 -- 每60秒发言一次
+    
+    while true do
+        wait(interval)
+        pcall(function()
+            sendChatMessage(AUTO_CHAT_MSG)
+        end)
+    end
+end
+
+-- 主执行函数
+local function main()
+    -- 立即执行一次
+    task.spawn(initializeAutoChat)
+    
+    -- 可选：启动定时发言（取消注释启用）
+    -- task.spawn(setupTimedChat)
+end
+
+-- 启动
+main()
 
 -- 全局错误处理
 local function globalErrorHandler(err)
