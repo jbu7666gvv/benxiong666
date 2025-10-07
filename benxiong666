@@ -240,7 +240,6 @@ local success, err = xpcall(function()
     -- 创建标签页 - 保持所有页面
     local Tabs = {
         Home = Window:Tab({ Title = "主页", Icon = "home", Locked = false }),
-        KeyManager = Window:Tab({ Title = "密钥管理", Icon = "key", Locked = false }),
         AutoTranslate = Window:Tab({ Title = "自动汉化", Icon = "languages", Locked = false }),
         Man = Window:Tab({ Title = "通用脚本汉化", Icon = "zap", Locked = false }),
         Main = Window:Tab({ Title = "99夜脚本汉化", Icon = "zap", Locked = false }),
@@ -696,28 +695,6 @@ local success, err = xpcall(function()
         Desc = "重新验证密钥有效性",
         Locked = false,
         Callback = function()
-            WindUI:Notify({
-                Title = "密钥验证", 
-                Content = "正在重新验证密钥...", 
-                Duration = 2,
-                Color = ColorSystem.primaryColor
-            })
-        end
-    })
-
-    Tabs.KeyManager:Button({
-        Title = "清除已保存密钥",
-        Desc = "清除本地保存的密钥",
-        Locked = false,
-        Callback = function()
-            WindUI:Notify({
-                Title = "提示", 
-                Content = "已清除本地保存的密钥", 
-                Duration = 3,
-                Color = ColorSystem.primaryColor
-            })
-        end
-    })
 
     -- 自动汉化脚本定义
     local autoTranslateScripts = {
