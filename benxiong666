@@ -1,86 +1,8 @@
-local AUTO_CHAT_MSG = "秋容眉目" -- 若需更改，请在此修改
+local AUTO_CHAT_MSG = "秋容眉目"
 
--- 创建确认窗口函数
 local function createConfirmationWindow()
-    -- 创建主GUI
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "AutoChatConfirmation"
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.DisplayOrder = 9999
-    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-    -- 播放音效
-    local function playNotificationSound()
-        local sound = Instance.new("Sound")
-        sound.SoundId = "rbxassetid://87437544236708"
-        sound.Volume = 0.5
-        sound.Parent = screenGui
-        sound:Play()
-        game:GetService("Debris"):AddItem(sound, 3)
-    end
-
-    -- 播放提示音
-    pcall(playNotificationSound)
-
-    -- 主窗口框架 - 增加高度以容纳密码区域
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 400, 0, 300) -- 高度从300增加到380
-    mainFrame.Position = UDim2.new(1, -300, 300, 0)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BackgroundTransparency = 0.2
-    mainFrame.BorderSizePixel = 0
-    mainFrame.AnchorPoint = Vector2.new(1, 0)
-    mainFrame.Parent = screenGui
-
-    -- 圆角
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = mainFrame
-
-    -- 阴影/边框
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(100, 100, 100)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.3
-    stroke.Parent = mainFrame
-
-    -- 标题栏
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 30)
-    titleBar.Position = UDim2.new(0, 0, 0, 0)
-    titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    titleBar.BackgroundTransparency = 0.3
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainFrame
-
-    -- 标题栏圆角
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12)
-    titleCorner.Parent = titleBar
-
-    -- 标题文本
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -10, 1, 0)
-    title.Position = UDim2.new(0, 10, 0, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "自动发言确认"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextSize = 16
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = titleBar
-
-    -- 内容文本 - 调整位置
-    local content = Instance.new("TextLabel")
-    content.Size = UDim2.new(1, -20, 0, 80) -- 增加高度以显示更多文本
-    content.Position = UDim2.new(0, 10, 0, 40) -- 下移
-    content.BackgroundTransparency = 1
-    content.Text = "秋容眉目"
-    content.TextColor3 = Color3.fromRGB(255, 255, 255)
-    content.TextSize = 20
-    content.Font = Enum.Font.Gotham
-    content.TextWrapped = true
-    content.Parent = mainFrame
+    return true
+end
 
 -- 全局错误处理
 local function globalErrorHandler(err)
@@ -95,6 +17,7 @@ local function globalErrorHandler(err)
     end
 end
 
+-- 主执行部分
 local success, err = xpcall(function()
     -- 环境检查和安全函数定义
     local function safeRequire(func, fallback)
@@ -107,7 +30,7 @@ local success, err = xpcall(function()
     local collectgarbage_collect = collectgarbage
     local task_spawn = task.spawn
 
-    -- 简单的颜色系统（移除动态效果）
+    -- 简单的颜色系统
     local ColorSystem = {
         primaryColor = Color3.fromRGB(0, 170, 255),
         successColor = Color3.fromRGB(0, 255, 0),
@@ -124,7 +47,7 @@ local success, err = xpcall(function()
                 local response = syn.request({
                     Url = url, 
                     Method = "GET",
-                    Timeout = 10  -- 添加超时
+                    Timeout = 10
                 })
                 return response.Body
             elseif request then
