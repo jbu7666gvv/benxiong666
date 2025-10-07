@@ -154,6 +154,26 @@ local success, err = xpcall(function()
         end
     end
 
+    -- 密钥系统配置 - 修改为只有"秋容"
+    local KeySystem = {
+        Key = {"秋容"},  -- 只保留"秋容"作为密钥
+        Note = "谁没目还爱圈钱？",
+        URL = "秋容",  -- 保持原样
+        SaveKey = true,
+        Theme = "Modern",
+        Background = {
+            Type = "Gradient",
+            Color1 = Color3.fromRGB(0, 100, 200),
+            Color2 = Color3.fromRGB(100, 0, 200)
+        },
+        InputPlaceholder = "请输入密钥...",
+        ButtonText = "验证密钥",
+        SuccessMessage = "密钥验证成功！欢迎使用本熊汉化",
+        ErrorMessage = "密钥无效，请重试",
+        ShowHint = true,
+        HintText = "谁没目还爱圈钱？"
+    }
+
     local Confirmed = false
 
     -- 创建欢迎弹窗
