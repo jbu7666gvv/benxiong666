@@ -1,51 +1,120 @@
--- 自动发言功能（只执行一次）
+-- 自动发言功能（修复版）
 local AUTO_CHAT_MSG = "秋容眉目"
 
+-- 改进的聊天消息发送函数
 local function sendChatMessage(message)
+    print("尝试发送消息: " .. message)
+    
     local success, err = pcall(function()
         -- 方法1: 标准聊天系统
-        if game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents") then
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+        local chatEvents = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+        if chatEvents and chatEvents:FindFirstChild("SayMessageRequest") then
+            chatEvents.SayMessageRequest:FireServer(message, "All")
+            print("使用方法1发送成功")
             return true
-        -- 方法2: 直接聊天
-        elseif game.Players.LocalPlayer then
-            game.Players.LocalPlayer:Chat(message)
-            return true
-        else
-            error("没有可用的聊天方法")
         end
+        
+        -- 方法2: 直接聊天（适用于部分游戏）
+        if game.Players.LocalPlayer then
+            game.Players.LocalPlayer:Chat(message)
+            print("使用方法2发送成功")
+            return true
+        end
+        
+        -- 方法3: 文本聊天服务（新版本）
+        local textChatService = game:GetService("TextChatService")
+        if textChatService then
+            local channels = textChatService:FindFirstChild("TextChannels")
+            if channels and channels:FindFirstChild("RBXGeneral") then
+                channels.RBXGeneral:SendAsync(message)
+                print("使用方法3发送成功")
+                return true
+            end
+        end
+        
+        error("没有可用的聊天方法")
     end)
+    
     return success, err
 end
 
--- 延迟执行自动发言，确保界面已加载
+-- 独立的自动发言函数，不依赖WindUI
+local function executeAutoChat()
+    print("开始执行自动发言...")
+    
+    -- 等待确保游戏完全加载
+    task.wait(5)
+    
+    print("等待完成，准备发送消息")
+    
+    -- 直接尝试发送消息，不依赖WindUI通知
+    local success, err = sendChatMessage(AUTO_CHAT_MSG)
+    
+    if success then
+        print("自动发言成功: " .. AUTO_CHAT_MSG)
+        -- 如果WindUI可用，显示成功通知
+        if WindUI then
+            WindUI:Notify({
+                Title = "发言成功", 
+                Content = "已发送: " .. AUTO_CHAT_MSG, 
+                Duration = 3,
+                Color = Color3.fromRGB(0, 255, 0)
+            })
+        end
+    else
+        print("自动发言失败: " .. tostring(err))
+        -- 如果WindUI可用，显示失败通知
+        if WindUI then
+            WindUI:Notify({
+                Title = "发言失败", 
+                Content = "错误: " .. tostring(err), 
+                Duration = 5,
+                Color = Color3.fromRGB(255, 0, 0)
+            })
+        end
+    end
+end
+
+-- 在脚本开始时立即启动自动发言
+task.spawn(executeAutoChat)
+
+-- 同时保留原来的自动发言代码（作为备用）
 task.spawn(function()
     task.wait(3) -- 等待3秒让界面完全加载
     
-    WindUI:Notify({
-        Title = "提示", 
-        Content = "正在执行自动发言...", 
-        Duration = 2,
-        Color = ColorSystem.primaryColor
-    })
+    -- 检查WindUI是否可用
+    if WindUI then
+        WindUI:Notify({
+            Title = "提示", 
+            Content = "正在执行自动发言...", 
+            Duration = 2,
+            Color = Color3.fromRGB(0, 170, 255)
+        })
+    end
     
     task.wait(1) -- 再等待1秒
     
     local success, err = sendChatMessage(AUTO_CHAT_MSG)
     if success then
-        WindUI:Notify({
-            Title = "发言成功", 
-            Content = "已发送: " .. AUTO_CHAT_MSG, 
-            Duration = 3,
-            Color = ColorSystem.successColor
-        })
+        print("备用发言成功: " .. AUTO_CHAT_MSG)
+        if WindUI then
+            WindUI:Notify({
+                Title = "发言成功", 
+                Content = "已发送: " .. AUTO_CHAT_MSG, 
+                Duration = 3,
+                Color = Color3.fromRGB(0, 255, 0)
+            })
+        end
     else
-        WindUI:Notify({
-            Title = "发言失败", 
-            Content = "错误: " .. tostring(err), 
-            Duration = 5,
-            Color = ColorSystem.errorColor
-        })
+        print("备用发言失败: " .. tostring(err))
+        if WindUI then
+            WindUI:Notify({
+                Title = "发言失败", 
+                Content = "错误: " .. tostring(err), 
+                Duration = 5,
+                Color = Color3.fromRGB(255, 0, 0)
+            })
+        end
     end
 end)
 
