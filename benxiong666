@@ -31,35 +31,27 @@ local success, err = xpcall(function()
         warningColor = Color3.fromRGB(255, 165, 0)
     }
 
-    -- 改进的 HTTP 获取函数
+    -- 安全的 HTTP 获取
     local function httpGet(url)
         local success, result = pcall(function()
-            -- 尝试多种HTTP方法
-            if game:GetService("HttpService"):GetHttpEnabled() then
-                if http_request then
-                    local response = http_request({
-                        Url = url,
-                        Method = "GET"
-                    })
-                    return response.Body
-                elseif syn and syn.request then
-                    local response = syn.request({
-                        Url = url,
-                        Method = "GET"
-                    })
-                    return response.Body
-                elseif request then
-                    local response = request({
-                        Url = url,
-                        Method = "GET"
-                    })
-                    return response.Body
-                else
-                    -- 使用原生的HttpGet
-                    return game:HttpGet(url)
-                end
+            if game.HttpGet then
+                return game:HttpGet(url, true)
+            elseif syn and syn.request then
+                local response = syn.request({
+                    Url = url, 
+                    Method = "GET",
+                    Timeout = 10  -- 添加超时
+                })
+                return response.Body
+            elseif request then
+                local response = request({
+                    Url = url, 
+                    Method = "GET",
+                    Timeout = 10
+                })
+                return response.Body
             else
-                error("HTTP服务被禁用")
+                error("没有可用的 HTTP 方法")
             end
         end)
         return success and result or nil
@@ -97,56 +89,13 @@ local success, err = xpcall(function()
         return success
     end
 
-    -- 简化的脚本加载函数（用于直接执行）
-    local function loadScriptDirect(url, scriptName)
-        if not WindUI then
-            warn("WindUI 未加载，无法显示通知: " .. scriptName)
-            return false
-        end
-        
-        WindUI:Notify({
-            Title = "提示", 
-            Content = "正在加载 " .. scriptName .. "...", 
-            Duration = 2,
-            Color = ColorSystem.primaryColor
-        })
-        
-        local success, err = pcall(function()
-            loadstring(game:HttpGet(url, true))()
-        end)
-        
-        if success then
-            WindUI:Notify({
-                Title = "成功", 
-                Content = scriptName .. " 执行完成", 
-                Duration = 3,
-                Color = ColorSystem.successColor
-            })
-        else
-            WindUI:Notify({
-                Title = "错误", 
-                Content = scriptName .. " 执行失败: " .. tostring(err), 
-                Duration = 5,
-                Color = ColorSystem.errorColor
-            })
-        end
-        return success
-    end
-
     -- 加载 AlienX Wind UI 库
     local WindUISuccess, WindUI = pcall(function()
         return loadstring(game:HttpGet("https://raw.githubusercontent.com/Syndromehsh/Lua/baff0bc41893a32f8e997d840241ad4b3d26ab4d/AlienX/AlienX%20Wind%203.0%20UI.txt"))()
     end)
 
     if not WindUISuccess then
-        warn("UI加载失败: " .. tostring(WindUI))
-        -- 尝试备用UI库
-        WindUISuccess, WindUI = pcall(function()
-            return loadstring(game:HttpGet("https://raw.githubusercontent.com/Syndromehsh/Lua/main/AlienX/AlienX%20Wind%203.0%20UI.txt"))()
-        end)
-        if not WindUISuccess then
-            error("UI库加载失败，请检查网络连接")
-        end
+        error("UI加载失败")
     end
 
     -- 彩虹颜色配置
@@ -160,6 +109,51 @@ local success, err = xpcall(function()
         ColorSequenceKeypoint.new(1, Color3.fromHex("9400D3"))
     })
 
+    local function loadScript(url, scriptName)
+        WindUI:Notify({
+            Title = "提示", 
+            Content = "正在加载 " .. scriptName .. "...", 
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+        
+        local success, result = pcall(function()
+            local response = httpGet(url)
+            if not response or #response < 50 then
+                return false, "脚本内容无效或为空"
+            end
+            
+            local loadedFunction, loadError = loadstring(response)
+            if not loadedFunction then
+                return false, "脚本编译错误: " .. tostring(loadError)
+            end
+            
+            local executeSuccess, executeError = pcall(loadedFunction)
+            if not executeSuccess then
+                return false, "脚本执行错误: " .. tostring(executeError)
+            end
+            
+            return true
+        end)
+        
+        if success and result then
+            WindUI:Notify({
+                Title = "成功", 
+                Content = scriptName .. " 加载完成", 
+                Duration = 3,
+                Color = ColorSystem.successColor
+            })
+        else
+            local errorMsg = success and result or "网络请求失败"
+            WindUI:Notify({
+                Title = "错误", 
+                Content = scriptName .. " 加载失败: " .. errorMsg, 
+                Duration = 5,
+                Color = ColorSystem.errorColor
+            })
+        end
+    end
+
     local Confirmed = false
 
     -- 创建欢迎弹窗
@@ -167,7 +161,7 @@ local success, err = xpcall(function()
         Title = "欢迎使用本熊脚本",
         Icon = "rbxassetid://112682688917044",
         IconThemed = true,
-        Content = "本熊脚本 1.5.4",
+        Content = "本熊脚本 1.5.7",
         Buttons = {
             {
                 Title = "退出",
@@ -202,9 +196,9 @@ local success, err = xpcall(function()
 
     -- 创建主窗口 - 缩小尺寸
     local Window = WindUI:CreateWindow({
-        Title = "本熊脚本 1.5.4",
+        Title = "本熊脚本 1.5.7",
         Icon = "rbxassetid://129260712070622",
-        Author = "本熊脚本 1.5.4",
+        Author = "本熊脚本 1.5.7",
         Size = UDim2.fromOffset(500, 400),  -- 从 600x500 缩小到 500x400
         Transparent = true,
         Theme = "Dark",
@@ -324,41 +318,40 @@ local success, err = xpcall(function()
     Tabs.General:Section({Title = "通用功能"})
     
     Tabs.General:Slider({
-        Title = "移速",
-        Value = {
-            Min = 16,
-            Max = 1000,
-            Default = 16,
-        },
-        Increment = 1,
-        Callback = function(value)
-            local Plr = game.Players.LocalPlayer
-            if Plr.Character then
-                local Humanoid = Plr.Character:FindFirstChildOfClass("Humanoid")
-                if Humanoid then
-                    Humanoid.WalkSpeed = value
-                end
+    Title = "移速",
+    Value = {
+        Min = 16,
+        Max = 1000,
+        Default = 16,
+    },
+    Increment = 1,
+    Callback = function(value)
+        local Plr = game.Players.LocalPlayer
+        if Plr.Character then
+            local Humanoid = Plr.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid then
+                Humanoid.WalkSpeed = value
             end
         end
-    })
-    
+    end
+})
     Tabs.General:Slider({
-        Title = "跳跃",
-        Value = {
-            Min = 50,
-            Max = 200,
-            Default = 50,
-        },
-        Increment = 1,
-        Callback = function(value)
-            if game.Players.LocalPlayer.Character then
-                local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid.JumpPower = value
-                end
+    Title = "跳跃",
+    Value = {
+        Min = 50,
+        Max = 200,
+        Default = 50,
+    },
+    Increment = 1,
+    Callback = function(value)
+        if game.Players.LocalPlayer.Character then
+            local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.JumpPower = value
             end
         end
-    })
+    end
+})
 
     Tabs.General:Toggle({
         Title = "夜视",
@@ -381,7 +374,7 @@ local success, err = xpcall(function()
         Desc = "加载死亡笔记脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0%20(1).txt", "死亡笔记")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0%20(1).txt"))()
         end
     })
 
@@ -390,7 +383,7 @@ local success, err = xpcall(function()
         Desc = "加载踏空脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float", "踏空脚本")
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
         end
     })
 
@@ -399,7 +392,7 @@ local success, err = xpcall(function()
         Desc = "加载无限跳脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://pastebin.com/raw/V5PQy3y0", "无限跳脚本")
+            loadstring(game:HttpGet("https://pastebin.com/raw/V5PQy3y0", true))()
         end
     })
 
@@ -408,7 +401,7 @@ local success, err = xpcall(function()
         Desc = "显示FPS计数器",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://pastefy.app/d9j82YJr/raw", "FPS显示脚本")
+            loadstring(game:HttpGet("https://pastefy.app/d9j82YJr/raw",true))()
         end
     })
 
@@ -417,7 +410,7 @@ local success, err = xpcall(function()
         Desc = "玩家进入游戏提示",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/boyscp/scriscriptsc/main/bbn.lua", "玩家进入提示脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/boyscp/scriscriptsc/main/bbn.lua"))()
         end
     })
 
@@ -426,7 +419,7 @@ local success, err = xpcall(function()
         Desc = "虚拟电脑键盘",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", "电脑键盘脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
         end
     })
 
@@ -437,7 +430,7 @@ local success, err = xpcall(function()
         Desc = "加载光影效果",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/MZEEN2424/Graphics/main/Graphics.xml", "光影脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/MZEEN2424/Graphics/main/Graphics.xml"))()
         end
     })
 
@@ -446,134 +439,132 @@ local success, err = xpcall(function()
         Desc = "加载第二种光影效果",
         Locked = false,
         Callback = function()
-            safeCall(function()
-                -- Roblox Graphics Enhancher
-                local light = game.Lighting
-                for i, v in pairs(light:GetChildren()) do
-                    v:Destroy()
-                end
+            -- Roblox Graphics Enhancher
+            local light = game.Lighting
+            for i, v in pairs(light:GetChildren()) do
+                v:Destroy()
+            end
 
-                local ter = workspace.Terrain
-                local color = Instance.new("ColorCorrectionEffect")
-                local bloom = Instance.new("BloomEffect")
-                local sun = Instance.new("SunRaysEffect")
-                local blur = Instance.new("BlurEffect")
+            local ter = workspace.Terrain
+            local color = Instance.new("ColorCorrectionEffect")
+            local bloom = Instance.new("BloomEffect")
+            local sun = Instance.new("SunRaysEffect")
+            local blur = Instance.new("BlurEffect")
 
-                color.Parent = light
-                bloom.Parent = light
-                sun.Parent = light
-                blur.Parent = light
+            color.Parent = light
+            bloom.Parent = light
+            sun.Parent = light
+            blur.Parent = light
 
-                -- enable or disable shit
-                local config = {
-                    Terrain = true;
-                    ColorCorrection = true;
-                    Sun = true;
-                    Lighting = true;
-                    BloomEffect = true;
-                }
+            -- enable or disable shit
+            local config = {
+                Terrain = true;
+                ColorCorrection = true;
+                Sun = true;
+                Lighting = true;
+                BloomEffect = true;
+            }
 
+            -- settings {
+            color.Enabled = false
+            color.Contrast = 0.15
+            color.Brightness = 0.1
+            color.Saturation = 0.25
+            color.TintColor = Color3.fromRGB(255, 222, 211)
+
+            bloom.Enabled = false
+            bloom.Intensity = 0.1
+
+            sun.Enabled = false
+            sun.Intensity = 0.2
+            sun.Spread = 1
+
+            bloom.Enabled = false
+            bloom.Intensity = 0.05
+            bloom.Size = 32
+            bloom.Threshold = 1
+
+            blur.Enabled = false
+            blur.Size = 6
+
+            -- settings }
+
+            if config.ColorCorrection then
+                color.Enabled = true
+            end
+
+            if config.Sun then
+                sun.Enabled = true
+            end
+
+            if config.Terrain then
                 -- settings {
-                color.Enabled = false
-                color.Contrast = 0.15
-                color.Brightness = 0.1
-                color.Saturation = 0.25
-                color.TintColor = Color3.fromRGB(255, 222, 211)
-
-                bloom.Enabled = false
-                bloom.Intensity = 0.1
-
-                sun.Enabled = false
-                sun.Intensity = 0.2
-                sun.Spread = 1
-
-                bloom.Enabled = false
-                bloom.Intensity = 0.05
-                bloom.Size = 32
-                bloom.Threshold = 1
-
-                blur.Enabled = false
-                blur.Size = 6
-
+                ter.WaterWaveSize = 0.1
+                ter.WaterWaveSpeed = 22
+                ter.WaterTransparency = 0.9
+                ter.WaterReflectance = 0.05
                 -- settings }
+            end
+            if config.Lighting then
+                -- settings {
+                light.Ambient = Color3.fromRGB(0, 0, 0)
+                light.Brightness = 4
+                light.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+                light.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+                light.ExposureCompensation = 0
+                light.FogColor = Color3.fromRGB(132, 132, 132)
+                light.GlobalShadows = true
+                light.OutdoorAmbient = Color3.fromRGB(112, 117, 128)
+                light.Outlines = false
+                -- settings }
+            end
+            local a = game.Lighting
+            a.Ambient = Color3.fromRGB(33, 33, 33)
+            a.Brightness = 5.69
+            a.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+            a.ColorShift_Top = Color3.fromRGB(255, 247, 237)
+            a.EnvironmentDiffuseScale = 0.105
+            a.EnvironmentSpecularScale = 0.522
+            a.GlobalShadows = true
+            a.OutdoorAmbient = Color3.fromRGB(51, 54, 67)
+            a.ShadowSoftness = 0.18
+            a.GeographicLatitude = -15.525
+            a.ExposureCompensation = 0.75
+            bloom.Enabled = true
+            bloom.Intensity = 0.99
+            bloom.Size = 9999 
+            bloom.Threshold = 0
+            local c = Instance.new("ColorCorrectionEffect", a)
+            c.Brightness = 0.015
+            c.Contrast = 0.25
+            c.Enabled = true
+            c.Saturation = 0.2
+            c.TintColor = Color3.fromRGB(217, 145, 57)
+            
+            local d = Instance.new("DepthOfFieldEffect", a)
+            d.Enabled = true
+            d.FarIntensity = 0.077
+            d.FocusDistance = 21.54
+            d.InFocusRadius = 20.77
+            d.NearIntensity = 0.277
+            local e = Instance.new("ColorCorrectionEffect", a)
+            e.Brightness = 0
+            e.Contrast = -0.07
+            e.Saturation = 0
+            e.Enabled = true
+            e.TintColor = Color3.fromRGB(255, 247, 239)
+            local e2 = Instance.new("ColorCorrectionEffect", a)
+            e2.Brightness = 0.2
+            e2.Contrast = 0.45
+            e2.Saturation = -0.1
+            e2.Enabled = true
+            e2.TintColor = Color3.fromRGB(255, 255, 255)
+            local s = Instance.new("SunRaysEffect", a)
+            s.Enabled = true
+            s.Intensity = 0.01
+            s.Spread = 0.146
 
-                if config.ColorCorrection then
-                    color.Enabled = true
-                end
-
-                if config.Sun then
-                    sun.Enabled = true
-                end
-
-                if config.Terrain then
-                    -- settings {
-                    ter.WaterWaveSize = 0.1
-                    ter.WaterWaveSpeed = 22
-                    ter.WaterTransparency = 0.9
-                    ter.WaterReflectance = 0.05
-                    -- settings }
-                end
-                if config.Lighting then
-                    -- settings {
-                    light.Ambient = Color3.fromRGB(0, 0, 0)
-                    light.Brightness = 4
-                    light.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
-                    light.ColorShift_Top = Color3.fromRGB(0, 0, 0)
-                    light.ExposureCompensation = 0
-                    light.FogColor = Color3.fromRGB(132, 132, 132)
-                    light.GlobalShadows = true
-                    light.OutdoorAmbient = Color3.fromRGB(112, 117, 128)
-                    light.Outlines = false
-                    -- settings }
-                end
-                local a = game.Lighting
-                a.Ambient = Color3.fromRGB(33, 33, 33)
-                a.Brightness = 5.69
-                a.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
-                a.ColorShift_Top = Color3.fromRGB(255, 247, 237)
-                a.EnvironmentDiffuseScale = 0.105
-                a.EnvironmentSpecularScale = 0.522
-                a.GlobalShadows = true
-                a.OutdoorAmbient = Color3.fromRGB(51, 54, 67)
-                a.ShadowSoftness = 0.18
-                a.GeographicLatitude = -15.525
-                a.ExposureCompensation = 0.75
-                bloom.Enabled = true
-                bloom.Intensity = 0.99
-                bloom.Size = 9999 
-                bloom.Threshold = 0
-                local c = Instance.new("ColorCorrectionEffect", a)
-                c.Brightness = 0.015
-                c.Contrast = 0.25
-                c.Enabled = true
-                c.Saturation = 0.2
-                c.TintColor = Color3.fromRGB(217, 145, 57)
-                
-                local d = Instance.new("DepthOfFieldEffect", a)
-                d.Enabled = true
-                d.FarIntensity = 0.077
-                d.FocusDistance = 21.54
-                d.InFocusRadius = 20.77
-                d.NearIntensity = 0.277
-                local e = Instance.new("ColorCorrectionEffect", a)
-                e.Brightness = 0
-                e.Contrast = -0.07
-                e.Saturation = 0
-                e.Enabled = true
-                e.TintColor = Color3.fromRGB(255, 247, 239)
-                local e2 = Instance.new("ColorCorrectionEffect", a)
-                e2.Brightness = 0.2
-                e2.Contrast = 0.45
-                e2.Saturation = -0.1
-                e2.Enabled = true
-                e2.TintColor = Color3.fromRGB(255, 255, 255)
-                local s = Instance.new("SunRaysEffect", a)
-                s.Enabled = true
-                s.Intensity = 0.01
-                s.Spread = 0.146
-
-                print("RTX Graphics loaded! Created by BrickoIcko")
-            end, "光影2脚本加载失败")
+            print("RTX Graphics loaded! Created by BrickoIcko")
         end
     })
 
@@ -582,7 +573,7 @@ local success, err = xpcall(function()
         Desc = "提升游戏画质",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://pastebin.com/raw/jHBfJYmS", "画质脚本")
+            loadstring(game:HttpGet("https://pastebin.com/raw/jHBfJYmS"))()
         end
     })
 
@@ -593,7 +584,7 @@ local success, err = xpcall(function()
         Desc = "R6角色动画",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://pastefy.app/wa3v2Vgm/raw", "撸管R6脚本")
+            loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
         end
     })
 
@@ -602,7 +593,7 @@ local success, err = xpcall(function()
         Desc = "R15角色动画",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://pastefy.app/YZoglOyJ/raw", "撸管R15脚本")
+            loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
         end
     })
 
@@ -613,7 +604,7 @@ local success, err = xpcall(function()
         Desc = "飞行脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt", "飞行脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
         end
     })
 
@@ -622,7 +613,7 @@ local success, err = xpcall(function()
         Desc = "飞车脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/dingding123hhh/vb/main/%E9%A3%9E%E8%BD%A6.lua", "飞车脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/vb/main/%E9%A3%9E%E8%BD%A6.lua"))()
         end
     })
 
@@ -633,7 +624,7 @@ local success, err = xpcall(function()
         Desc = "铁拳甩飞脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt', "铁拳脚本")
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'))()
         end
     })
 
@@ -642,7 +633,7 @@ local success, err = xpcall(function()
         Desc = "旋转甩飞脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%97%8B%E8%BD%AC.lua", "旋转甩飞脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%97%8B%E8%BD%AC.lua"))()
         end
     })
 
@@ -651,7 +642,7 @@ local success, err = xpcall(function()
         Desc = "接触甩飞脚本",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/0Ben1/fe./main/Fling%20GUI", "碰到就飞脚本")
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe./main/Fling%20GUI"))()
         end
     })
 
@@ -663,7 +654,7 @@ local success, err = xpcall(function()
         Desc = "指定目标甩飞",
         Locked = false,
         Callback = function()
-            loadScriptDirect('https://pastefy.app/9SmQXduA/raw', "指定甩飞脚本")
+            loadstring(game:HttpGet(('https://pastefy.app/9SmQXduA/raw'),true))()
         end
     })
 
@@ -672,7 +663,21 @@ local success, err = xpcall(function()
         Desc = "全图范围甩飞",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://pastebin.com/raw/zqyDSUWX", "全图甩飞脚本")
+            loadstring(game:HttpGet("https://pastebin.com/raw/zqyDSUWX"))()
+        end
+    })
+
+    Tabs.KeyManager:Button({
+        Title = "清除已保存密钥",
+        Desc = "清除本地保存的密钥",
+        Locked = false,
+        Callback = function()
+            WindUI:Notify({
+                Title = "提示", 
+                Content = "已清除本地保存的密钥", 
+                Duration = 3,
+                Color = ColorSystem.primaryColor
+            })
         end
     })
 
@@ -694,7 +699,7 @@ local success, err = xpcall(function()
             Desc = scriptInfo.Desc,
             Locked = false,
             Callback = function()
-                loadScriptDirect(scriptInfo.URL, scriptInfo.Title)
+                loadScript(scriptInfo.URL, scriptInfo.Title)
             end
         })
     end
@@ -717,7 +722,7 @@ local success, err = xpcall(function()
             Desc = scriptInfo.Desc,
             Locked = false,
             Callback = function()
-                loadScriptDirect(scriptInfo.URL, scriptInfo.Title)
+                loadScript(scriptInfo.URL, scriptInfo.Title)
             end
         })
     end
@@ -755,6 +760,7 @@ local success, err = xpcall(function()
             RequiresKey = true
         },
         {
+    
             Title = "VEX OP(无卡密)",
             Desc = "汉化",
             URL = "https://raw.githubusercontent.com/jbu7666gvv/quanhan/refs/heads/main/VEXOP",
@@ -770,7 +776,7 @@ local success, err = xpcall(function()
             Desc = scriptInfo.Desc,
             Locked = false,
             Callback = function()
-                loadScriptDirect(scriptInfo.URL, scriptInfo.Title)
+                loadScript(scriptInfo.URL, scriptInfo.Title)
             end
         })
     end
@@ -782,20 +788,26 @@ local success, err = xpcall(function()
         Desc = "汉化",
         Locked = false,
         Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi", "RINGTA脚本")
+            loadScript("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi", "RINGTA脚本")
         end
     })
 
     Tabs.Oth:Section({Title = "偷走脑红汉化脚本"})
 
     Tabs.Oth:Button({
-        Title = "MIRANDA HUB (无卡密)",
-        Desc = "汉化",
-        Locked = false,
-        Callback = function()
-            loadScriptDirect("https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/1", "MIRANDA HUB脚本")
-        end
-    })
+    Title = "MIRANDA HUB (无卡密)",
+    Desc = "汉化",
+    Locked = false,
+    Callback = function()
+        WindUI:Notify({
+            Title = "提示", 
+            Content = "正在加载脚本...", 
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+        loadScript("https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/1", "MIRANDA HUB脚本")
+    end
+})
 
     -- 工具页面
     Tabs.Other:Section({Title = "系统工具"})
@@ -831,7 +843,7 @@ local success, err = xpcall(function()
 
     -- 完成通知
     WindUI:Notify({
-        Title = "本熊脚本 1.5.4", 
+        Title = "本熊脚本 1.5.7", 
         Content = "界面加载完成！", 
         Duration = 4,
         Color = ColorSystem.successColor
