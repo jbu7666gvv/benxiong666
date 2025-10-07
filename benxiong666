@@ -687,15 +687,6 @@ local success, err = xpcall(function()
         end
     })
 
-    -- 密钥管理页面
-    Tabs.KeyManager:Section({Title = "密钥状态"})
-
-    Tabs.KeyManager:Button({
-        Title = "重新验证密钥",
-        Desc = "重新验证密钥有效性",
-        Locked = false,
-        Callback = function()
-
     -- 自动汉化脚本定义
     local autoTranslateScripts = {
         {
