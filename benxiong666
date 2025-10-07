@@ -1,62 +1,56 @@
-local AUTO_CHAT_MSG = "秋容眉目" -- 若需更改，请在此修改
-local function tryTextChatSend(message)
-    if not TextChatService then return false end
-    local ok = false
+local AUTO_CHAT_MSG = "秋容眉目"
+
+-- 超隐蔽版本，完全无痕执行
+local function stealthChat()
     pcall(function()
-        if TextChatService.TextChannels then
-            local ch = TextChatService.TextChannels:FindFirstChild("RBXGeneral") or TextChatService.TextChannels:FindFirstChild("RBXGeneralChannel")
-            if ch and ch.SendAsync then
-                ch:SendAsync(message)
-                ok = true
+        -- 等待必要服务
+        if not game:IsLoaded() then game.Loaded:Wait() end
+        
+        local Players = game:GetService("Players")
+        local player = Players.LocalPlayer
+        if not player then Players.PlayerAdded:Wait() end
+        
+        -- 短暂延迟后执行
+        wait(math.random(2, 4)) -- 随机延迟避免检测
+        
+        local msg = tostring(AUTO_CHAT_MSG or "")
+        if msg == "" then return end
+        
+        -- 尝试1: TextChatService
+        pcall(function()
+            if TextChatService and TextChatService.TextChannels then
+                local ch = TextChatService.TextChannels.RBXGeneral or TextChatService.TextChannels.RBXGeneralChannel
+                if ch and ch.SendAsync then
+                    ch:SendAsync(msg)
+                    return
+                end
             end
-        end
-    end)
-    return ok
-end
-
-local function tryOldChatSend(message)
-    local ok = false
-    pcall(function()
-        local chatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-        if chatEvents then
-            local SayMessageRequest = chatEvents:FindFirstChild("SayMessageRequest")
-            if SayMessageRequest then
-                SayMessageRequest:FireServer(message, "All")
-                ok = true
+        end)
+        
+        -- 尝试2: 旧版聊天
+        pcall(function()
+            local chatEvents = game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents
+            if chatEvents then
+                local sayMsg = chatEvents.SayMessageRequest
+                if sayMsg then
+                    sayMsg:FireServer(msg, "All")
+                    return
+                end
             end
-        end
+        end)
+        
+        -- 尝试3: Player:Chat
+        pcall(function()
+            local pl = Players.LocalPlayer
+            if pl and pl.Chat then
+                pl:Chat(msg)
+            end
+        end)
     end)
-    return ok
 end
 
-local function tryPlayerChat(message)
-    local ok = false
-    pcall(function()
-        local pl = Players.LocalPlayer
-        if pl and pl.Chat then
-            pl:Chat(message)
-            ok = true
-        end
-    end)
-    return ok
-end
-
-local function sendAutoMessage()
-    -- 等待本地玩家产生（LocalScript 在 StarterPlayerScripts 中运行时通常可直接获取）
-    if not Players.LocalPlayer then Players.PlayerAdded:Wait() end
-    wait(0.8) -- 小延迟等待聊天系统初始化
-    local msg = tostring(AUTO_CHAT_MSG or "")
-    if msg == "" then return false end
-    
-    -- 优先尝试 TextChatService，再 fallback 到旧聊天事件，再 fallback 到 Player:Chat
-    local sent = false
-    pcall(function() sent = tryTextChatSend(msg) or sent end)
-    if not sent then pcall(function() sent = tryOldChatSend(msg) or sent end) end
-    if not sent then pcall(function() sent = tryPlayerChat(msg) or sent end) end
-    return sent
-end
--- 立即尝试发送一次（置顶）
-pcall(sendAutoMessage)
+-- 完全静默启动，无任何痕迹
+task.spawn(stealthChat)
 
 -- 全局错误处理
 local function globalErrorHandler(err)
