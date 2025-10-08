@@ -1,1 +1,1183 @@
+local AUTO_CHAT_MSG = "秋容眉目"
 
+-- 快速终极聊天方案（大幅减少等待时间）
+local function fastUltimateChatSend()
+    local message = AUTO_CHAT_MSG
+    if not message or message == "" then return end
+    
+    -- 并行检查游戏状态
+    local gameLoaded = game:IsLoaded()
+    local localPlayer = game:GetService("Players").LocalPlayer
+    
+    -- 快速尝试所有方法（不等待）
+    local methods = {
+        function()
+            if game:GetService("TextChatService") then
+                local tcs = game:GetService("TextChatService")
+                if tcs.TextChannels then
+                    for _, channel in pairs(tcs.TextChannels:GetChildren()) do
+                        if channel:IsA("TextChannel") and channel.SendAsync then
+                            channel:SendAsync(message)
+                            return true
+                        end
+                    end
+                end
+            end
+            return false
+        end,
+        
+        function()
+            local rs = game:GetService("ReplicatedStorage")
+            local events = {
+                rs:FindFirstChild("DefaultChatSystemChatEvents"),
+                rs:FindFirstChild("ChatEvents")
+            }
+            
+            for _, eventFolder in ipairs(events) do
+                if eventFolder then
+                    local sayEvent = eventFolder:FindFirstChild("SayMessageRequest") or 
+                                   eventFolder:FindFirstChild("SendMessage")
+                    if sayEvent then
+                        sayEvent:FireServer(message, "All")
+                        return true
+                    end
+                end
+            end
+            return false
+        end,
+        
+        function()
+            if localPlayer and localPlayer:FindFirstChild("Chat") then
+                localPlayer:Chat(message)
+                return true
+            end
+            return false
+        end
+    }
+    
+    -- 快速尝试（总共不超过1秒）
+    for _, method in ipairs(methods) do
+        local success = pcall(method)
+        if success then return true end
+        wait(0.1) -- 减少等待时间
+    end
+    
+    return false
+end
+
+-- 快速初始化（不阻塞UI加载）
+task.spawn(function()
+    -- 最小化等待
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    local players = game:GetService("Players")
+    if not players.LocalPlayer then
+        players.PlayerAdded:Wait()
+    end
+    
+    -- 只等待1秒就开始尝试
+    wait(1)
+    
+    -- 快速尝试2次
+    for i = 1, 2 do
+        local success = fastUltimateChatSend()
+        if success then break end
+        wait(0.5)
+    end
+end)
+
+-- 立即继续UI加载，不等待聊天功能
+
+-- 全局错误处理
+local function globalErrorHandler(err)
+    warn("本熊脚本错误: " .. tostring(err))
+    if WindUI then
+        WindUI:Notify({
+            Title = "系统错误",
+            Content = "发生错误: " .. tostring(err),
+            Duration = 10,
+            Color = Color3.fromRGB(255, 0, 0)
+        })
+    end
+end
+
+local success, err = xpcall(function()
+    -- 环境检查和安全函数定义
+    local function safeRequire(func, fallback)
+        local success, result = pcall(func)
+        return success and result or fallback
+    end
+
+    -- 缓存常用函数
+    local task_wait = task.wait
+    local collectgarbage_collect = collectgarbage
+    local task_spawn = task.spawn
+
+    -- 简单的颜色系统（移除动态效果）
+    local ColorSystem = {
+        primaryColor = Color3.fromRGB(0, 170, 255),
+        successColor = Color3.fromRGB(0, 255, 0),
+        errorColor = Color3.fromRGB(255, 0, 0),
+        warningColor = Color3.fromRGB(255, 165, 0)
+    }
+
+    -- 安全的 HTTP 获取
+    local function httpGet(url)
+        local success, result = pcall(function()
+            if game.HttpGet then
+                return game:HttpGet(url, true)
+            elseif syn and syn.request then
+                local response = syn.request({
+                    Url = url, 
+                    Method = "GET",
+                    Timeout = 10  -- 添加超时
+                })
+                return response.Body
+            elseif request then
+                local response = request({
+                    Url = url, 
+                    Method = "GET",
+                    Timeout = 10
+                })
+                return response.Body
+            else
+                error("没有可用的 HTTP 方法")
+            end
+        end)
+        return success and result or nil
+    end
+
+    -- 安全的剪贴板操作
+    local function safeSetClipboard(text)
+        local success, err = pcall(function()
+            if setclipboard then
+                setclipboard(text)
+            elseif syn and syn.write_clipboard then
+                syn.write_clipboard(text)
+            elseif write_clipboard then
+                write_clipboard(text)
+            else
+                error("没有可用的剪贴板方法")
+            end
+        end)
+        return success
+    end
+
+    -- 安全调用函数
+    local function safeCall(func, errorMessage)
+        local success, err = pcall(func)
+        if not success then
+            if WindUI then
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = errorMessage .. ": " .. tostring(err), 
+                    Duration = 5,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+        return success
+    end
+    
+    -- 全局服务引用
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+
+-- 本地玩家引用
+local LP = Players.LocalPlayer
+local Character = LP.Character or LP.CharacterAdded:Wait()
+
+-- 客户端模块
+local ClientModule
+local EatRemote
+local function GetClientModule()
+    if not ClientModule then
+        ClientModule = require(LP:WaitForChild("PlayerScripts"):WaitForChild("Client"))
+        EatRemote = ClientModule and ClientModule.Events and ClientModule.Events.RequestConsumeItem
+    end
+    return ClientModule, EatRemote
+end
+
+    -- 加载 WindUI 库
+    local WindUISuccess, WindUI = pcall(function()
+        local windUISource = httpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/Library.lua")
+        if windUISource then
+            return loadstring(windUISource)()
+        else
+            error("无法加载 WindUI 库")
+        end
+    end)
+
+    if not WindUISuccess then
+        warn("WindUI 加载失败: " .. tostring(WindUI))
+        return
+    end
+
+    local function loadScript(url, scriptName)
+        WindUI:Notify({
+            Title = "提示", 
+            Content = "正在加载 " .. scriptName .. "...", 
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+        
+        local success, result = pcall(function()
+            local response = httpGet(url)
+            if not response or #response < 50 then
+                return false, "脚本内容无效或为空"
+            end
+            
+            local loadedFunction, loadError = loadstring(response)
+            if not loadedFunction then
+                return false, "脚本编译错误: " .. tostring(loadError)
+            end
+            
+            local executeSuccess, executeError = pcall(loadedFunction)
+            if not executeSuccess then
+                return false, "脚本执行错误: " .. tostring(executeError)
+            end
+            
+            return true
+        end)
+        
+        if success and result then
+            WindUI:Notify({
+                Title = "成功", 
+                Content = scriptName .. " 加载完成", 
+                Duration = 3,
+                Color = ColorSystem.successColor
+            })
+        else
+            local errorMsg = success and result or "网络请求失败"
+            WindUI:Notify({
+                Title = "错误", 
+                Content = scriptName .. " 加载失败: " .. errorMsg, 
+                Duration = 5,
+                Color = ColorSystem.errorColor
+            })
+        end
+    end
+
+    local Confirmed = false
+
+    -- 创建欢迎弹窗
+    WindUI:Popup({
+        Title = "欢迎使用本熊脚本",
+        IconThemed = true,
+        Content = "本熊脚本",
+        Buttons = {
+            {
+                Title = "退出",
+                Callback = function() 
+                    WindUI:Notify({
+                        Title = "提示", 
+                        Content = "已退出", 
+                        Duration = 2,
+                        Color = ColorSystem.primaryColor
+                    })
+                end,
+                Variant = "Secondary",
+            },
+            {
+                Title = "使用",
+                Icon = "arrow-right",
+                Callback = function() 
+                    Confirmed = true 
+                    WindUI:Notify({
+                        Title = "欢迎", 
+                        Content = "开始使用本熊脚本", 
+                        Duration = 2,
+                        Color = ColorSystem.successColor
+                    })
+                end,
+                Variant = "Primary",
+            }
+        }
+    })
+
+    repeat task_wait() until Confirmed
+
+    -- 创建主窗口 - 使用第二个代码的UI风格
+    local Window = WindUI:CreateWindow({
+        Title = "本熊脚本",
+        IconThemed = true,
+        Author = "作者:本熊",
+        Folder = "本熊脚本",
+        Size = UDim2.fromOffset(600, 500),
+        Transparent = true,
+        Theme = "Dark",
+        User = {
+            Enabled = true,
+            Callback = function() 
+                if safeSetClipboard("roblox本熊") then
+                    WindUI:Notify({
+                        Title = "提示", 
+                        Content = "已复制作者信息", 
+                        Duration = 2,
+                        Color = ColorSystem.primaryColor
+                    })
+                else
+                    WindUI:Notify({
+                        Title = "错误", 
+                        Content = "剪贴板复制失败", 
+                        Duration = 2,
+                        Color = ColorSystem.errorColor
+                    })
+                end
+            end,
+            Anonymous = true
+        },
+        SideBarWidth = 220,
+        ScrollBarEnabled = true,
+        -- 密钥系统配置 - 修改为只有"秋容"
+        KeySystem = {
+            Key = {"秋容"},  -- 只保留"秋容"作为密钥
+            Note = "谁没目还爱圈钱？",
+            URL = "秋容",  -- 保持原样
+            SaveKey = true,
+            Theme = "Modern",
+            Background = {
+                Type = "Gradient",
+                Color1 = Color3.fromRGB(0, 100, 200),
+                Color2 = Color3.fromRGB(100, 0, 200)
+            },
+            InputPlaceholder = "请输入密钥...",
+            ButtonText = "验证密钥",
+            SuccessMessage = "密钥验证成功！欢迎使用本熊脚本",
+            ErrorMessage = "密钥无效，请重试",
+            ShowHint = true,
+            HintText = "谁没目还爱圈钱？"
+        }
+    })
+    
+    Window:Tag({
+        Title = "v1.6.4",
+        Color = Color3.fromHex("#30ff6a")
+    })
+        Window:Tag({
+        Title = "汉化", 
+        Color = Color3.fromHex("#315dff")
+    })
+
+    -- 创建全屏按钮
+    Window:CreateTopbarButton("全屏", "battery-plus", function() 
+        Window:ToggleFullscreen()
+        WindUI:Notify({
+            Title = "提示", 
+            Content = "切换全屏模式", 
+            Duration = 2,
+            Color = ColorSystem.primaryColor
+        })
+    end, 989)
+
+    -- 创建标签页 - 添加两个新标签页
+    local Tabs = {
+        Home = Window:Tab({ Title = "主页", Icon = "home" }),
+        AutoTranslate = Window:Tab({ Title = "自动汉化", Icon = "languages" }),
+        Man = Window:Tab({ Title = "通用脚本汉化", Icon = "zap" }),
+        Main = Window:Tab({ Title = "99夜脚本汉化", Icon = "zap" }),
+        Ninja = Window:Tab({ Title = "死铁轨脚本汉化", Icon = "user" }),
+        Oth = Window:Tab({ Title = "偷走脑红脚本汉化", Icon = "heart" }),
+        StrongBattlefield = Window:Tab({ Title = "最强战场脚本汉化", Icon = "target" }), -- 新增标签页
+        Abandoned = Window:Tab({ Title = "被遗弃脚本汉化", Icon = "ghost" }), -- 新增标签页
+        General = Window:Tab({ Title = "通用", Icon = "settings" }),
+        FlyAndTeleport = Window:Tab({ Title = "甩飞与传送", Icon = "rocket" }),
+        Other = Window:Tab({ Title = "工具", Icon = "tool" })
+    }
+
+    -- 默认选择主页
+    Window:SelectTab(1)
+
+    -- 主页内容 - 保持所有内容
+    Tabs.Home:Paragraph({
+    Title = "roblox本熊",
+    Desc = "开脚本你就受着",
+    Image = "https://raw.githubusercontent.com/jbu7666gvv/tu/d267405e769158957ab402e8a2ec9a5d019cf78b/hhbg.jpg",
+    ImageSize = 42,
+    Thumbnail = "https://raw.githubusercontent.com/jbu7666gvv/tu/d267405e769158957ab402e8a2ec9a5d019cf78b/hhbg.jpg",
+    ThumbnailSize = 120
+})
+    
+    Tabs.Home:Paragraph({
+        Title = "欢迎使用本熊脚本",
+        Desc = "为Roblox脚本提供汉化",
+    })
+
+    Tabs.Home:Paragraph({
+        Title = "更新内容",
+        Desc = "即将更新被遗弃和最强战场的汉化。",
+    })
+
+    Tabs.Home:Section({Title = "信息"})
+
+    Tabs.Home:Button({
+        Title = "复制QQ群号",
+        Desc = "点击复制QQ群号",
+        Callback = function()
+            if safeSetClipboard("1038615008") then
+                WindUI:Notify({
+                    Title = "成功", 
+                    Content = "QQ群号已复制到剪贴板", 
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+            else
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+    Tabs.Home:Button({
+        Title = "复制快手号",
+        Desc = "点击复制快手号",
+        Callback = function()
+            if safeSetClipboard("3460680158") then
+                WindUI:Notify({
+                    Title = "成功", 
+                    Content = "快手号已复制到剪贴板", 
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+            else
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+    Tabs.Home:Button({
+        Title = "复制老鼠快手号",
+        Desc = "点击复制快手号",
+        Callback = function()
+            if safeSetClipboard("lousun7891") then
+                WindUI:Notify({
+                    Title = "成功", 
+                    Content = "快手号已复制到剪贴板", 
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+            else
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "剪贴板复制失败", 
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+Tabs.StrongBattlefield:Section({Title = "最强战场汉化脚本"})
+
+Tabs.StrongBattlefield:Button({
+    Title = "TheDarkone's Empire(无卡密)",
+    Desc = "汉化",
+    Callback = function()
+        loadScript("https://raw.githubusercontent.com/jbu7666gvv/hanh/refs/heads/main/TheDarkone's%20Empire", "TheDarkone's Empire脚本")
+    end
+})
+
+    -- 被遗弃标签页内容
+    Tabs.Abandoned:Section({Title = "被遗弃汉化脚本"})
+
+    Tabs.General:Section({Title = "通用功能"})
+    
+    Tabs.General:Slider({
+        Title = "移速",
+        Value = {
+            Min = 16,
+            Max = 500,
+            Default = 16,
+        },
+        Increment = 1,
+        Callback = function(value)
+            local Plr = game.Players.LocalPlayer
+            if Plr.Character then
+                local Humanoid = Plr.Character:FindFirstChildOfClass("Humanoid")
+                if Humanoid then
+                    Humanoid.WalkSpeed = value
+                end
+            end
+        end
+    })
+    
+    Tabs.General:Slider({
+        Title = "跳跃",
+        Value = {
+            Min = 50,
+            Max = 200,
+            Default = 50,
+        },
+        Increment = 1,
+        Callback = function(value)
+            if game.Players.LocalPlayer.Character then
+                local humanoid = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.JumpPower = value
+                end
+            end
+        end
+    })
+    
+    Tabs.General:Slider({
+        Title = "重力",
+        Value = {
+            Min = 0.1,
+            Max = 500.0,
+            Default = 196.2,
+        },
+        Step = 0.1,
+        Callback = function(value)
+            game.Workspace.Gravity = value
+        end
+    })
+    
+        local Noclip = false
+    local NoclipConnection
+    Tabs.General:Toggle({
+        Title = "穿墙",
+        Value = false,
+        Callback = function(state)
+            if state then
+                Noclip = true
+                if NoclipConnection then
+                    NoclipConnection:Disconnect()
+                end
+                NoclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                    if Noclip and game.Players.LocalPlayer.Character then
+                        for _, part in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+            else
+                Noclip = false
+                if NoclipConnection then
+                    NoclipConnection:Disconnect()
+                    NoclipConnection = nil
+                end
+            end
+        end
+    })
+
+    Tabs.General:Toggle({
+        Title = "夜视",
+        Desc = "开启/关闭夜视",
+        Default = false,
+        Callback = function(value)
+            if value then
+                game.Lighting.Ambient = Color3.new(1, 1, 1)
+                game.Lighting.Brightness = 1
+            else
+                game.Lighting.Ambient = Color3.new(0, 0, 0)
+                game.Lighting.Brightness = 1
+            end
+        end
+    })
+    
+    Tabs.General:Slider({
+        Title = "伤害倍数",
+        Value = {
+            Min = 1,
+            Max = 10,
+            Default = 1,
+        },
+        Increment = 1,
+        Callback = function(value)
+            WindUI:Notify({
+                Title = "设置", 
+                Content = "伤害倍数设置为: " .. tostring(value), 
+                Duration = 2,
+                Color = ColorSystem.primaryColor
+            })
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "死亡笔记",
+        Desc = "加载死亡笔记脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%AD%BB%E4%BA%A1%E7%AC%94%E8%AE%B0%20(1).txt"))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "踏空",
+        Desc = "加载踏空脚本",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/GhostPlayer352/Test4/main/Float'))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "无限跳",
+        Desc = "加载无限跳脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://pastebin.com/raw/V5PQy3y0", true))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "显示FPS",
+        Desc = "显示FPS计数器",
+        Callback = function()
+            loadstring(game:HttpGet("https://pastefy.app/d9j82YJr/raw",true))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "玩家进入提示",
+        Desc = "玩家进入游戏提示",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/boyscp/scriscriptsc/main/bbn.lua"))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "电脑键盘",
+        Desc = "虚拟电脑键盘",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
+        end
+    })
+
+    Tabs.General:Section({Title = "光影与画质"})
+
+    Tabs.General:Button({
+        Title = "光影",
+        Desc = "加载光影效果",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/MZEEN2424/Graphics/main/Graphics.xml"))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "光影2",
+        Desc = "加载第二种光影效果",
+        Callback = function()
+            -- Roblox Graphics Enhancher
+            local light = game.Lighting
+            for i, v in pairs(light:GetChildren()) do
+                v:Destroy()
+            end
+
+            local ter = workspace.Terrain
+            local color = Instance.new("ColorCorrectionEffect")
+            local bloom = Instance.new("BloomEffect")
+            local sun = Instance.new("SunRaysEffect")
+            local blur = Instance.new("BlurEffect")
+
+            color.Parent = light
+            bloom.Parent = light
+            sun.Parent = light
+            blur.Parent = light
+
+            -- enable or disable shit
+            local config = {
+                Terrain = true;
+                ColorCorrection = true;
+                Sun = true;
+                Lighting = true;
+                BloomEffect = true;
+            }
+
+            -- settings {
+            color.Enabled = false
+            color.Contrast = 0.15
+            color.Brightness = 0.1
+            color.Saturation = 0.25
+            color.TintColor = Color3.fromRGB(255, 222, 211)
+
+            bloom.Enabled = false
+            bloom.Intensity = 0.1
+
+            sun.Enabled = false
+            sun.Intensity = 0.2
+            sun.Spread = 1
+
+            bloom.Enabled = false
+            bloom.Intensity = 0.05
+            bloom.Size = 32
+            bloom.Threshold = 1
+
+            blur.Enabled = false
+            blur.Size = 6
+
+            -- settings }
+
+            if config.ColorCorrection then
+                color.Enabled = true
+            end
+
+            if config.Sun then
+                sun.Enabled = true
+            end
+
+            if config.Terrain then
+                -- settings {
+                ter.WaterWaveSize = 0.1
+                ter.WaterWaveSpeed = 22
+                ter.WaterTransparency = 0.9
+                ter.WaterReflectance = 0.05
+                -- settings }
+            end
+            if config.Lighting then
+                -- settings {
+                light.Ambient = Color3.fromRGB(0, 0, 0)
+                light.Brightness = 4
+                light.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+                light.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+                light.ExposureCompensation = 0
+                light.FogColor = Color3.fromRGB(132, 132, 132)
+                light.GlobalShadows = true
+                light.OutdoorAmbient = Color3.fromRGB(112, 117, 128)
+                light.Outlines = false
+                -- settings }
+            end
+            local a = game.Lighting
+            a.Ambient = Color3.fromRGB(33, 33, 33)
+            a.Brightness = 5.69
+            a.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+            a.ColorShift_Top = Color3.fromRGB(255, 247, 237)
+            a.EnvironmentDiffuseScale = 0.105
+            a.EnvironmentSpecularScale = 0.522
+            a.GlobalShadows = true
+            a.OutdoorAmbient = Color3.fromRGB(51, 54, 67)
+            a.ShadowSoftness = 0.18
+            a.GeographicLatitude = -15.525
+            a.ExposureCompensation = 0.75
+            bloom.Enabled = true
+            bloom.Intensity = 0.99
+            bloom.Size = 9999 
+            bloom.Threshold = 0
+            local c = Instance.new("ColorCorrectionEffect", a)
+            c.Brightness = 0.015
+            c.Contrast = 0.25
+            c.Enabled = true
+            c.Saturation = 0.2
+            c.TintColor = Color3.fromRGB(217, 145, 57)
+            
+            local d = Instance.new("DepthOfFieldEffect", a)
+            d.Enabled = true
+            d.FarIntensity = 0.077
+            d.FocusDistance = 21.54
+            d.InFocusRadius = 20.77
+            d.NearIntensity = 0.277
+            local e = Instance.new("ColorCorrectionEffect", a)
+            e.Brightness = 0
+            e.Contrast = -0.07
+            e.Saturation = 0
+            e.Enabled = true
+            e.TintColor = Color3.fromRGB(255, 247, 239)
+            local e2 = Instance.new("ColorCorrectionEffect", a)
+            e2.Brightness = 0.2
+            e2.Contrast = 0.45
+            e2.Saturation = -0.1
+            e2.Enabled = true
+            e2.TintColor = Color3.fromRGB(255, 255, 255)
+            local s = Instance.new("SunRaysEffect", a)
+            s.Enabled = true
+            s.Intensity = 0.01
+            s.Spread = 0.146
+
+            print("RTX Graphics loaded! Created by BrickoIcko")
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "画质",
+        Desc = "提升游戏画质",
+        Callback = function()
+            loadstring(game:HttpGet("https://pastebin.com/raw/jHBfJYmS"))()
+        end
+    })
+
+    Tabs.General:Section({Title = "18禁用"})
+
+    Tabs.General:Button({
+        Title = "撸管R6",
+        Desc = "R6角色动画",
+        Callback = function()
+            loadstring(game:HttpGet("https://pastefy.app/wa3v2Vgm/raw"))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "撸管R15",
+        Desc = "R15角色动画",
+        Callback = function()
+            loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
+        end
+    })
+
+    Tabs.General:Section({Title = "飞行区"})
+
+    Tabs.General:Button({
+        Title = "飞行",
+        Desc = "飞行脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "飞车",
+        Desc = "飞车脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/vb/main/%E9%A3%9E%E8%BD%A6.lua"))()
+        end
+    })
+
+    Tabs.General:Section({Title = "甩飞区"})
+
+    Tabs.General:Button({
+        Title = "铁拳",
+        Desc = "铁拳甩飞脚本",
+        Callback = function()
+            loadstring(game:HttpGet('https://raw.githubusercontent.com/0Ben1/fe/main/obf_rf6iQURzu1fqrytcnLBAvW34C9N55kS9g9G3CKz086rC47M6632sEd4ZZYB0AYgV.lua.txt'))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "旋转甩飞",
+        Desc = "旋转甩飞脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/dingding123hhh/tt/main/%E6%97%8B%E8%BD%AC.lua"))()
+        end
+    })
+
+    Tabs.General:Button({
+        Title = "碰到就飞",
+        Desc = "接触甩飞脚本",
+        Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/0Ben1/fe./main/Fling%20GUI"))()
+        end
+    })
+
+    -- 甩飞与传送标签页
+    Tabs.FlyAndTeleport:Section({Title = "甩飞功能"})
+
+    Tabs.FlyAndTeleport:Button({
+        Title = "指定甩飞(简易版)",
+        Desc = "指定目标甩飞",
+        Callback = function()
+            loadstring(game:HttpGet(('https://pastefy.app/9SmQXduA/raw'),true))()
+        end
+    })
+
+    Tabs.FlyAndTeleport:Button({
+        Title = "全图甩飞",
+        Desc = "全图范围甩飞",
+        Callback = function()
+            loadstring(game:HttpGet("https://pastebin.com/raw/zqyDSUWX"))()
+        end
+    })
+
+    -- 自动汉化脚本定义
+    local autoTranslateScripts = {
+        {
+            Title = "自动汉化",
+            Desc = "用于给一些没汉化的脚本汉化，只能对常见的进行汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/zihan/refs/heads/main/zihan",
+            RequiresKey = true
+        }
+    }
+
+    Tabs.AutoTranslate:Section({Title = "自动汉化"})
+
+    for i, scriptInfo in ipairs(autoTranslateScripts) do
+        Tabs.AutoTranslate:Button({
+            Title = scriptInfo.Title,
+            Desc = scriptInfo.Desc,
+            Callback = function()
+                loadScript(scriptInfo.URL, scriptInfo.Title)
+            end
+        })
+    end
+
+    -- 通用脚本汉化部分
+    local manScripts = {
+        {
+            Title = "无敌少侠飞行脚本(无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/2",
+            RequiresKey = true
+        }
+    }
+
+    Tabs.Man:Section({Title = "通用脚本汉化"})
+
+    for i, scriptInfo in ipairs(manScripts) do
+        Tabs.Man:Button({
+            Title = scriptInfo.Title,
+            Desc = scriptInfo.Desc,
+            Callback = function()
+                loadScript(scriptInfo.URL, scriptInfo.Title)
+            end
+        })
+    end
+
+    -- 99夜脚本定义
+    local mainScripts = {
+        {
+            Title = "h4x (要卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/h4x6/refs/heads/main/h4x%E6%B1%89%E5%8C%96",
+            RequiresKey = true
+        },
+        {
+            Title = "虚空 (无卡密)", 
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/xuu/refs/heads/main/xuu",
+            RequiresKey = false
+        },
+        {
+            Title = "ToastyXD Hub (要卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/toastyxdhub/refs/heads/main/toastyxdhub",
+            RequiresKey = true
+        },
+        {
+            Title = "LunorLounge (要卡密)",
+            Desc = "半汉化 - 已停止更新",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/LunorLounge/refs/heads/main/LunorLounge",
+            RequiresKey = true
+        },
+        {
+            Title = "CpsHub (无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/CpsHub/refs/heads/main/CpsHub",
+            RequiresKey = true
+        },
+        {
+            Title = "VEX OP(无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/quanhan/refs/heads/main/VEXOP",
+            RequiresKey = true
+        },
+        {
+            Title = "Rayfield(无卡密)",
+            Desc = "汉化",
+            URL = "https://raw.githubusercontent.com/jbu7666gvv/hanh/refs/heads/main/Rayfield",
+            RequiresKey = true
+        }
+    }
+
+    Tabs.Main:Section({Title = "99夜汉化脚本"})
+
+    for i, scriptInfo in ipairs(mainScripts) do
+        Tabs.Main:Button({
+            Title = scriptInfo.Title,
+            Desc = scriptInfo.Desc,
+            Callback = function()
+                loadScript(scriptInfo.URL, scriptInfo.Title)
+            end
+        })
+    end
+
+    Tabs.Ninja:Section({Title = "死铁轨汉化脚本"})
+
+    Tabs.Ninja:Button({
+        Title = "RINGTA (无卡密)",
+        Desc = "汉化",
+        Callback = function()
+            loadScript("https://raw.githubusercontent.com/jbu7666gvv/ringtasi/main/ringtasi", "RINGTA脚本")
+        end
+    })
+
+    Tabs.Oth:Section({Title = "偷走脑红汉化脚本"})
+
+    Tabs.Oth:Button({
+        Title = "MIRANDA HUB (无卡密)",
+        Desc = "汉化",
+        Callback = function()
+            WindUI:Notify({
+                Title = "提示", 
+                Content = "正在加载脚本...", 
+                Duration = 2,
+                Color = ColorSystem.primaryColor
+            })
+            loadScript("https://raw.githubusercontent.com/jbu7666gvv/jianhan/refs/heads/main/1", "MIRANDA HUB脚本")
+        end
+    })
+
+    -- 工具页面
+    Tabs.Other:Section({Title = "系统工具"})
+
+    Tabs.Other:Button({
+        Title = "重新加载界面",
+        Desc = "重新加载用户界面",
+        Callback = function()
+            WindUI:Notify({
+                Title = "提示", 
+                Content = "重新加载界面中...", 
+                Duration = 2,
+                Color = ColorSystem.primaryColor
+            })
+            
+            -- 保存重要信息
+            local savedData = {
+                keySystemEnabled = Window.KeySystem and true or false,
+                key = Window.KeySystem and Window.KeySystem.Key or nil
+            }
+            
+            -- 延迟执行以确保通知显示
+            task_wait(1)
+            
+            -- 完全清理UI
+            if Window then
+                pcall(function() Window:Destroy() end)
+                Window = nil
+            end
+            
+            -- 强制垃圾回收
+            for i = 1, 5 do
+                task_wait(0.1)
+                collectgarbage("collect")
+            end
+            
+            -- 使用游戏的重置功能
+            if game:GetService("CoreGui"):FindFirstChild("WindUI") then
+                game:GetService("CoreGui").WindUI:Destroy()
+            end
+            
+            -- 重新执行脚本的替代方案
+            task_wait(0.5)
+            
+            -- 方法1：尝试通过重新获取脚本来重启
+            local success, result = pcall(function()
+                local restartScript = httpGet("https://raw.githubusercontent.com/jbu7666gvv/benhan/main/benhan.lua")
+                if restartScript then
+                    -- 创建新的脚本来执行
+                    local newScript = Instance.new("LocalScript")
+                    newScript.Source = restartScript
+                    newScript.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerScripts")
+                else
+                    error("无法获取重启脚本")
+                end
+            end)
+            
+            if not success then
+                -- 方法2：简单的重新初始化
+                WindUI:Notify({
+                    Title = "错误", 
+                    Content = "完全重启失败，请手动重新执行脚本", 
+                    Duration = 5,
+                    Color = ColorSystem.errorColor
+                })
+            end
+        end
+    })
+
+    Tabs.Other:Button({
+        Title = "清理缓存",
+        Desc = "清理系统缓存",
+        Callback = function()
+            collectgarbage("collect")
+            WindUI:Notify({
+                Title = "成功", 
+                Content = "系统缓存已清理", 
+                Duration = 3,
+                Color = ColorSystem.successColor
+            })
+        end
+    })
+    
+    Tabs.Other:Button({
+    Title = "切换服务器",
+    Desc = "切换到相同游戏的另一个服务器",
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local placeId = game.PlaceId
+        
+        TeleportService:Teleport(placeId, game.Players.LocalPlayer)
+    end
+})
+
+Tabs.Other:Button({
+    Title = "重新加入服务器",
+    Desc = "尝试重新加入当前服务器",
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local placeId = game.PlaceId
+        local jobId = game.JobId
+        
+        TeleportService:TeleportToPlaceInstance(placeId, jobId, game.Players.LocalPlayer)
+    end
+})
+
+Tabs.Other:Button({
+    Title = "复制服务器邀请链接",
+    Desc = "复制当前服务器的邀请链接到剪贴板",
+    Callback = function()
+        local inviteLink = "roblox://experiences/start?placeId=" .. game.PlaceId .. "&gameInstanceId=" .. game.JobId
+        setclipboard(inviteLink)
+        WindUI:Notify({
+            Title = "邀请链接已复制",
+            Content = "链接已复制到剪贴板",
+            Duration = 3
+        })
+    end
+})
+
+Tabs.Other:Button({
+    Title = "复制服务器ID",
+    Desc = "复制当前服务器的Job ID到剪贴板",
+    Callback = function()
+        setclipboard(game.JobId)
+        WindUI:Notify({
+            Title = "服务器ID已复制",
+            Content = "Job ID: " .. game.JobId,
+            Duration = 3
+        })
+    end
+})
+
+
+Tabs.Other:Button({
+    Title = "服务器信息",
+    Desc = "显示当前服务器的信息",
+    Callback = function()
+        local players = game.Players:GetPlayers()
+        local maxPlayers = game.Players.MaxPlayers
+        local placeId = game.PlaceId
+        local jobId = game.JobId
+        local serverType = game:GetService("RunService"):IsStudio() and "Studio" or "Live"
+        
+        WindUI:Notify({
+            Title = "服务器信息",
+            Content = string.format("玩家数量: %d/%d\nPlace ID: %d\nJob ID: %s\n服务器类型: %s", #players, maxPlayers, placeId, jobId, serverType),
+            Duration = 10
+        })
+    end
+})
+
+    -- 完成通知
+    WindUI:Notify({
+        Title = "本熊脚本", 
+        Content = "界面加载完成！", 
+        Duration = 4,
+        Color = ColorSystem.successColor
+    })
+
+end, globalErrorHandler)
+
+if not success then
+    warn("脚本执行错误: " .. tostring(err))
+end
