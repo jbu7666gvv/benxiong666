@@ -1054,89 +1054,64 @@ Tabs.General:Toggle({
 -- 99夜修复版无敌功能
 local Night99FixedGod = false
 
+-- 99夜终极简单保护 - 绝对不会出错
+local Night99SimpleGod = false
+local SimpleGodConnection = nil
+
 Tabs.General:Toggle({
-    Title = "99夜修复无敌",
-    Desc = "修复错误的稳定无敌保护",
+    Title = "99夜简单无敌",
+    Desc = "最简单的生命值保护，无复杂操作",
     Value = false,
     Callback = function(state)
         safeCall(function()
-            Night99FixedGod = state
+            Night99SimpleGod = state
             
             if state then
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "99夜修复无敌已开启",
+                    Content = "简单无敌已开启",
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
                 
-                -- 方法1：简单直接的生命值保护（无错误版本）
-                local protectionLoop
-                protectionLoop = game:GetService("RunService").Heartbeat:Connect(function()
-                    if not Night99FixedGod then
-                        if protectionLoop then
-                            protectionLoop:Disconnect()
-                        end
+                -- 最简单的保护：每0.1秒检查一次生命值
+                SimpleGodConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                    if not Night99SimpleGod and SimpleGodConnection then
+                        SimpleGodConnection:Disconnect()
                         return
                     end
                     
-                    local character = LP.Character
-                    if character and character:IsDescendantOf(workspace) then
-                        local humanoid = character:FindFirstChildOfClass("Humanoid")
-                        if humanoid then
-                            -- 保持生命值在100
-                            if humanoid.Health < 100 then
-                                humanoid.Health = 100
-                            end
-                            
-                            -- 防止死亡状态
-                            if humanoid.Health <= 0 then
+                    -- 安全地获取角色和人体模型
+                    local success, result = pcall(function()
+                        local char = LP.Character
+                        if char then
+                            local humanoid = char:FindFirstChildWhichIsA("Humanoid")
+                            if humanoid and humanoid.Health < 100 then
                                 humanoid.Health = 100
                             end
                         end
+                    end)
+                    
+                    -- 如果出错，静默处理
+                    if not success then
+                        -- 不显示错误，避免干扰
                     end
                 end)
-                
-                -- 方法2：角色重生保护
-                local characterAddedConnection
-                characterAddedConnection = LP.CharacterAdded:Connect(function(newChar)
-                    if Night99FixedGod then
-                        wait(1)
-                        WindUI:Notify({
-                            Title = "保护",
-                            Content = "新角色保护已应用",
-                            Duration = 2,
-                            Color = ColorSystem.primaryColor
-                        })
-                    end
-                end)
-                
-                -- 保存连接以便清理
-                _G.Night99GodConnections = {
-                    heartbeat = protectionLoop,
-                    characterAdded = characterAddedConnection
-                }
                 
             else
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "99夜修复无敌已关闭",
+                    Content = "简单无敌已关闭",
                     Duration = 3,
                     Color = ColorSystem.primaryColor
                 })
                 
-                -- 清理所有连接
-                if _G.Night99GodConnections then
-                    if _G.Night99GodConnections.heartbeat then
-                        _G.Night99GodConnections.heartbeat:Disconnect()
-                    end
-                    if _G.Night99GodConnections.characterAdded then
-                        _G.Night99GodConnections.characterAdded:Disconnect()
-                    end
-                    _G.Night99GodConnections = nil
+                if SimpleGodConnection then
+                    SimpleGodConnection:Disconnect()
+                    SimpleGodConnection = nil
                 end
             end
-        end, "切换99夜修复无敌")
+        end, "切换简单无敌")
     end
 })
 
