@@ -1051,119 +1051,107 @@ Tabs.General:Toggle({
     end
 })
 
--- 99夜服务器端无敌方案
-local Night99ServerGod = false
+-- 99夜高级欺骗方案
+local Night99AdvancedGod = false
 
 Tabs.General:Toggle({
-    Title = "99夜服务器无敌",
-    Desc = "针对服务器端数据的无敌方案",
+    Title = "99夜高级欺骗",
+    Desc = "使用高级技术欺骗服务器",
     Value = false,
     Callback = function(state)
         safeCall(function()
-            Night99ServerGod = state
+            Night99AdvancedGod = state
             
             if state then
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "服务器无敌已开启",
+                    Content = "高级欺骗已开启",
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
                 
-                -- 方法1：拦截并修改发送到服务器的数据
-                local originalNamecall
-                originalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-                    if Night99ServerGod then
-                        local method = getnamecallmethod()
-                        local args = {...}
-                        
-                        -- 拦截所有远程调用
-                        if method == "FireServer" or method == "InvokeServer" then
-                            local newArgs = {}
-                            local modified = false
-                            
-                            -- 修改伤害相关参数
-                            for i, arg in ipairs(args) do
-                                if type(arg) == "number" then
-                                    -- 如果是伤害值，改为0或负数（治疗）
-                                    if arg > 0 and (tostring(self):lower():find("damage") or tostring(self):lower():find("hurt")) then
-                                        newArgs[i] = 0  -- 伤害改为0
-                                        modified = true
-                                    elseif arg < 0 then
-                                        newArgs[i] = math.abs(arg)  -- 负数改为正数（治疗）
-                                        modified = true
-                                    else
-                                        newArgs[i] = arg
-                                    end
-                                elseif type(arg) == "string" then
-                                    -- 修改字符串参数
-                                    local lowerArg = arg:lower()
-                                    if lowerArg:find("damage") or lowerArg:find("kill") or lowerArg:find("death") then
-                                        newArgs[i] = "heal"  -- 伤害改为治疗
-                                        modified = true
-                                    else
-                                        newArgs[i] = arg
-                                    end
-                                else
-                                    newArgs[i] = arg
-                                end
-                            end
-                            
-                            if modified then
-                                return originalNamecall(self, unpack(newArgs))
-                            end
-                        end
-                    end
-                    
-                    return originalNamecall(self, ...)
-                end)
+                -- 方法1：完全钩住网络通信
+                local httpService = game:GetService("HttpService")
+                local originalRequest
                 
-                -- 方法2：模拟客户端行为来欺骗服务器
-                local function simulateHealthRecovery()
-                    -- 查找可能的治疗远程
-                    local healingRemotes = {
-                        "Heal", "Health", "Recover", "Restore", "Revive"
-                    }
-                    
-                    -- 定期发送治疗请求
-                    local healLoop
-                    healLoop = game:GetService("RunService").Heartbeat:Connect(function()
-                        if not Night99ServerGod then
-                            healLoop:Disconnect()
-                            return
-                        end
-                        
-                        -- 每5秒发送一次治疗请求
-                        pcall(function()
-                            for _, remoteName in pairs(healingRemotes) do
-                                local remote = game:GetService("ReplicatedStorage"):FindFirstChild(remoteName)
-                                if remote and remote:IsA("RemoteEvent") then
-                                    remote:FireServer(LP.Character, 100)  -- 发送治疗值
+                if syn and syn.request then
+                    originalRequest = syn.request
+                    syn.request = function(options)
+                        if Night99AdvancedGod then
+                            -- 修改请求数据
+                            if options.Body then
+                                local bodyData = httpService:JSONDecode(options.Body)
+                                if bodyData and (bodyData.health or bodyData.damage) then
+                                    -- 修改健康相关数据
+                                    if bodyData.health and bodyData.health < 100 then
+                                        bodyData.health = 100
+                                    end
+                                    if bodyData.damage and bodyData.damage > 0 then
+                                        bodyData.damage = 0
+                                    end
+                                    options.Body = httpService:JSONEncode(bodyData)
                                 end
                             end
-                        end)
-                    end)
-                    
-                    return healLoop
+                        end
+                        return originalRequest(options)
+                    end
                 end
                 
-                -- 启动模拟治疗
-                _G.HealLoop = simulateHealthRecovery()
+                -- 方法2：创建虚假的健康数据包
+                local function sendFakeHealthData()
+                    local fakeData = {
+                        playerId = LP.UserId,
+                        health = 100,
+                        maxHealth = 100,
+                        hunger = 100,
+                        thirst = 100,
+                        timestamp = os.time()
+                    }
+                    
+                    -- 查找可能的统计数据远程
+                    local statRemotes = {"UpdateStats", "PlayerData", "SurvivalData"}
+                    
+                    for _, remoteName in pairs(statRemotes) do
+                        local remote = game:GetService("ReplicatedStorage"):FindFirstChild(remoteName)
+                        if remote and remote:IsA("RemoteEvent") then
+                            remote:FireServer(fakeData)
+                        end
+                    end
+                end
+                
+                -- 定期发送虚假数据
+                local fakeDataLoop
+                fakeDataLoop = game:GetService("RunService").Heartbeat:Connect(function()
+                    if not Night99AdvancedGod then
+                        fakeDataLoop:Disconnect()
+                        return
+                    end
+                    
+                    -- 每3秒发送一次虚假数据
+                    pcall(sendFakeHealthData)
+                end)
+                
+                _G.FakeDataLoop = fakeDataLoop
                 
             else
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "服务器无敌已关闭",
+                    Content = "高级欺骗已关闭",
                     Duration = 3,
                     Color = ColorSystem.primaryColor
                 })
                 
-                if _G.HealLoop then
-                    _G.HealLoop:Disconnect()
-                    _G.HealLoop = nil
+                -- 恢复原始请求函数
+                if originalRequest then
+                    syn.request = originalRequest
+                end
+                
+                if _G.FakeDataLoop then
+                    _G.FakeDataLoop:Disconnect()
+                    _G.FakeDataLoop = nil
                 end
             end
-        end, "切换服务器无敌")
+        end, "切换高级欺骗")
     end
 })
 
