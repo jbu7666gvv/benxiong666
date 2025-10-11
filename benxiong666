@@ -1051,80 +1051,119 @@ Tabs.General:Toggle({
     end
 })
 
--- 99夜强制保护 - 更积极的保护方式
-local Night99ForceGod = false
+-- 99夜服务器端无敌方案
+local Night99ServerGod = false
 
 Tabs.General:Toggle({
-    Title = "99夜强制保护",
-    Desc = "更积极的保护，防止各种死亡",
+    Title = "99夜服务器无敌",
+    Desc = "针对服务器端数据的无敌方案",
     Value = false,
     Callback = function(state)
         safeCall(function()
-            Night99ForceGod = state
+            Night99ServerGod = state
             
             if state then
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "强制保护已开启",
+                    Content = "服务器无敌已开启",
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
                 
-                local forceLoop
-                forceLoop = game:GetService("RunService").Heartbeat:Connect(function()
-                    if not Night99ForceGod then
-                        forceLoop:Disconnect()
-                        return
-                    end
-                    
-                    pcall(function()
-                        local char = LP.Character
-                        if char then
-                            local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-                            if humanoid then
-                                -- 方法1：强制设置生命值
-                                humanoid.Health = 100
-                                humanoid.MaxHealth = 100
-                                
-                                -- 方法2：防止死亡状态
-                                if humanoid:GetState() == Enum.HumanoidStateType.Dead then
-                                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
-                                end
-                                
-                                -- 方法3：检查并修复所有数值属性
-                                for _, child in pairs(char:GetDescendants()) do
-                                    if child:IsA("NumberValue") or child:IsA("IntValue") then
-                                        if child.Name:lower():find("health") or 
-                                           child.Name:lower():find("hunger") or 
-                                           child.Name:lower():find("thirst") then
-                                            if child.Value < 50 then
-                                                child.Value = 100
-                                            end
-                                        end
+                -- 方法1：拦截并修改发送到服务器的数据
+                local originalNamecall
+                originalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+                    if Night99ServerGod then
+                        local method = getnamecallmethod()
+                        local args = {...}
+                        
+                        -- 拦截所有远程调用
+                        if method == "FireServer" or method == "InvokeServer" then
+                            local newArgs = {}
+                            local modified = false
+                            
+                            -- 修改伤害相关参数
+                            for i, arg in ipairs(args) do
+                                if type(arg) == "number" then
+                                    -- 如果是伤害值，改为0或负数（治疗）
+                                    if arg > 0 and (tostring(self):lower():find("damage") or tostring(self):lower():find("hurt")) then
+                                        newArgs[i] = 0  -- 伤害改为0
+                                        modified = true
+                                    elseif arg < 0 then
+                                        newArgs[i] = math.abs(arg)  -- 负数改为正数（治疗）
+                                        modified = true
+                                    else
+                                        newArgs[i] = arg
                                     end
+                                elseif type(arg) == "string" then
+                                    -- 修改字符串参数
+                                    local lowerArg = arg:lower()
+                                    if lowerArg:find("damage") or lowerArg:find("kill") or lowerArg:find("death") then
+                                        newArgs[i] = "heal"  -- 伤害改为治疗
+                                        modified = true
+                                    else
+                                        newArgs[i] = arg
+                                    end
+                                else
+                                    newArgs[i] = arg
                                 end
                             end
+                            
+                            if modified then
+                                return originalNamecall(self, unpack(newArgs))
+                            end
                         end
-                    end)
+                    end
+                    
+                    return originalNamecall(self, ...)
                 end)
                 
-                -- 保存连接
-                _G.ForceGodLoop = forceLoop
+                -- 方法2：模拟客户端行为来欺骗服务器
+                local function simulateHealthRecovery()
+                    -- 查找可能的治疗远程
+                    local healingRemotes = {
+                        "Heal", "Health", "Recover", "Restore", "Revive"
+                    }
+                    
+                    -- 定期发送治疗请求
+                    local healLoop
+                    healLoop = game:GetService("RunService").Heartbeat:Connect(function()
+                        if not Night99ServerGod then
+                            healLoop:Disconnect()
+                            return
+                        end
+                        
+                        -- 每5秒发送一次治疗请求
+                        pcall(function()
+                            for _, remoteName in pairs(healingRemotes) do
+                                local remote = game:GetService("ReplicatedStorage"):FindFirstChild(remoteName)
+                                if remote and remote:IsA("RemoteEvent") then
+                                    remote:FireServer(LP.Character, 100)  -- 发送治疗值
+                                end
+                            end
+                        end)
+                    end)
+                    
+                    return healLoop
+                end
+                
+                -- 启动模拟治疗
+                _G.HealLoop = simulateHealthRecovery()
                 
             else
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "强制保护已关闭",
+                    Content = "服务器无敌已关闭",
                     Duration = 3,
                     Color = ColorSystem.primaryColor
                 })
                 
-                if _G.ForceGodLoop then
-                    _G.ForceGodLoop:Disconnect()
-                    _G.ForceGodLoop = nil
+                if _G.HealLoop then
+                    _G.HealLoop:Disconnect()
+                    _G.HealLoop = nil
                 end
             end
-        end, "切换强制保护")
+        end, "切换服务器无敌")
     end
 })
 
