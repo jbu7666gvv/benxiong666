@@ -960,6 +960,21 @@ local success, err = xpcall(function()
         end
     })
 
+-- 地图透视功能
+local xrayEnabled = false
+
+local function xray()
+    for _, part in pairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and not part:IsDescendantOf(game.Players.LocalPlayer.Character) then
+            if xrayEnabled then
+                part.LocalTransparencyModifier = 0.7
+            else
+                part.LocalTransparencyModifier = 0
+            end
+        end
+    end
+end
+
 -- 通用功能部分
 Tabs.General:Section({Title = "通用功能"})
 
