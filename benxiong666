@@ -941,35 +941,56 @@ Tabs.General:Slider({
     end
 })
 
-Tabs.General:Slider({
-    Title = "跳跃高度",
-    Desc = "设置角色跳跃高度（0-50）",
-    Value = {
-        Min = 0,
-        Max = 50,
-        Default = 7.2, -- Roblox 默认跳跃高度
-    },
-    Increment = 0.1,
+Tabs.General:Textbox({
+    Title = "跳跃高度设置",
+    Desc = "输入跳跃高度数值 (0.1 - 100)，默认: 7.2",
+    Default = "7.2",
+    Placeholder = "请输入跳跃高度...",
     Callback = function(value)
         safeCall(function()
+            -- 转换为数字
+            local jumpValue = tonumber(value)
+            
+            -- 验证输入
+            if not jumpValue then
+                WindUI:Notify({
+                    Title = "输入错误",
+                    Content = "请输入有效的数字",
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+                return
+            end
+            
+            if jumpValue < 0.1 or jumpValue > 100 then
+                WindUI:Notify({
+                    Title = "输入错误",
+                    Content = "跳跃高度范围: 0.1 - 100",
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+                return
+            end
+            
+            -- 应用设置
             local player = game.Players.LocalPlayer
             if player and player.Character then
                 local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     -- 确保使用 JumpHeight 系统
                     humanoid.UseJumpPower = false
-                    humanoid.JumpHeight = value
+                    humanoid.JumpHeight = jumpValue
                     
                     WindUI:Notify({
-                        Title = "跳跃设置",
-                        Content = string.format("跳跃高度设置为: %.1f", value),
-                        Duration = 2,
-                        Color = ColorSystem.primaryColor
+                        Title = "跳跃设置成功",
+                        Content = string.format("跳跃高度已设置为: %.1f", jumpValue),
+                        Duration = 3,
+                        Color = ColorSystem.successColor
                     })
                 else
                     WindUI:Notify({
                         Title = "错误",
-                        Content = "未找到 Humanoid",
+                        Content = "未找到 Humanoid 组件",
                         Duration = 3,
                         Color = ColorSystem.errorColor
                     })
@@ -977,12 +998,36 @@ Tabs.General:Slider({
             else
                 WindUI:Notify({
                     Title = "错误",
-                    Content = "角色未加载完成",
+                    Content = "角色未加载完成，请稍后重试",
                     Duration = 3,
                     Color = ColorSystem.errorColor
                 })
             end
         end, "设置跳跃高度")
+    end
+})
+
+-- 同时保留滑块版本作为备选（可选）
+Tabs.General:Slider({
+    Title = "跳跃高度滑块",
+    Desc = "快速调整跳跃高度",
+    Value = {
+        Min = 1,
+        Max = 50,
+        Default = 7.2,
+    },
+    Increment = 0.5,
+    Callback = function(value)
+        safeCall(function()
+            local player = game.Players.LocalPlayer
+            if player and player.Character then
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.UseJumpPower = false
+                    humanoid.JumpHeight = value
+                end
+            end
+        end, "滑块设置跳跃高度")
     end
 })
 
