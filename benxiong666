@@ -1024,9 +1024,12 @@ local Night99NoDamage = false
 local OriginalFireServer
 local OriginalInvokeServer
 
+-- 99夜修复版纯无伤害
+local Night99NoDamage = false
+
 Tabs.General:Toggle({
-    Title = "99夜纯无伤害",
-    Desc = "只拦截伤害，不做其他操作",
+    Title = "99夜无伤害",
+    Desc = "修复错误的纯无伤害功能",
     Value = false,
     Callback = function(state)
         safeCall(function()
@@ -1035,74 +1038,60 @@ Tabs.General:Toggle({
             if state then
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "纯无伤害已开启",
+                    Content = "无伤害已开启",
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
                 
-                -- 方法1：直接钩住远程调用的核心方法
-                if not OriginalFireServer then
-                    local mt = getrawmetatable(game)
-                    local oldNamecall = mt.__namecall
+                -- 安全的远程拦截方法
+                local function safeRemoteHook()
+                    -- 只针对特定的远程事件进行拦截
+                    local damageRemotes = {}
                     
-                    mt.__namecall = newcclosure(function(self, ...)
-                        local method = getnamecallmethod()
-                        
-                        if Night99NoDamage and (method == "FireServer" or method == "InvokeServer") then
-                            local args = {...}
-                            local remoteName = tostring(self)
-                            
-                            -- 只拦截明确的伤害关键词
-                            local damageKeywords = {
-                                "Damage", "Hit", "Hurt", "Kill", "Death",
-                                "Attack", "Strike", "Shoot", "Explosion","Wolf","Bite"
-                            }
-                            
-                            for _, keyword in pairs(damageKeywords) do
-                                if string.find(remoteName, keyword) then
+                    -- 查找所有可能的伤害远程
+                    for _, obj in pairs(game:GetDescendants()) do
+                        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                            local name = obj.Name:lower()
+                            if name:find("damage") or name:find("hit") or name:find("hurt") or 
+                               name:find("attack") or name:find("kill") then
+                                table.insert(damageRemotes, obj)
+                            end
+                        end
+                    end
+                    
+                    -- 对每个伤害远程进行安全拦截
+                    for _, remote in pairs(damageRemotes) do
+                        pcall(function()
+                            local oldFire = remote.FireServer
+                            remote.FireServer = function(self, ...)
+                                if Night99NoDamage then
                                     WindUI:Notify({
                                         Title = "拦截",
-                                        Content = "已阻止伤害: " .. remoteName,
+                                        Content = "已阻止伤害: " .. remote.Name,
                                         Duration = 1,
                                         Color = ColorSystem.warningColor
                                     })
                                     return nil
+                                else
+                                    return oldFire(self, ...)
                                 end
                             end
-                            
-                            -- 检查参数中的伤害关键词
-                            for _, arg in pairs(args) do
-                                if type(arg) == "string" then
-                                    for _, keyword in pairs(damageKeywords) do
-                                        if string.find(string.lower(arg), string.lower(keyword)) then
-                                            WindUI:Notify({
-                                                Title = "拦截",
-                                                Content = "已阻止伤害参数",
-                                                Duration = 1,
-                                                Color = ColorSystem.warningColor
-                                            })
-                                            return nil
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                        
-                        return oldNamecall(self, ...)
-                    end)
-                    
-                    OriginalFireServer = oldNamecall
+                        end)
+                    end
                 end
+                
+                -- 执行安全拦截
+                safeRemoteHook()
                 
             else
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "纯无伤害已关闭",
+                    Content = "无伤害已关闭",
                     Duration = 3,
                     Color = ColorSystem.primaryColor
                 })
             end
-        end, "切换纯无伤害")
+        end, "切换无伤害")
     end
 })
 
