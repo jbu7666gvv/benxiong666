@@ -527,7 +527,7 @@ local success, err = xpcall(function()
     })
     
     Window:Tag({
-        Title = "v1.7.5",
+        Title = "v1.7.6",
         Color = Color3.fromHex("#30ff6a")
     })
     
@@ -964,14 +964,28 @@ local success, err = xpcall(function()
 local xrayEnabled = false
 
 local function xray()
-    for _, part in pairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not part:IsDescendantOf(game.Players.LocalPlayer.Character) then
-            if xrayEnabled then
-                part.LocalTransparencyModifier = 0.7
-            else
-                part.LocalTransparencyModifier = 0
+    local success, err = pcall(function()
+        local character = game.Players.LocalPlayer.Character
+        if not character then return end
+        
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                -- 跳过玩家自己的部件
+                if part:IsDescendantOf(character) then
+                    continue
+                end
+                
+                if xrayEnabled then
+                    part.LocalTransparencyModifier = 0.7  -- 半透明
+                else
+                    part.LocalTransparencyModifier = 0    -- 不透明
+                end
             end
         end
+    end)
+    
+    if not success then
+        warn("xray函数错误: " .. tostring(err))
     end
 end
 
