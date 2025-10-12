@@ -1,332 +1,100 @@
 local AUTO_CHAT_MSG = "秋容眉目"
 
--- 强制反抓包保护系统（无法关闭）
+-- =============================================
+-- 🔒 简化版反抓包保护系统
+-- =============================================
 local AntiSpySystem = {
-    Enabled = true,  -- 强制开启
+    Enabled = true,
     DetectionCount = 0,
-    LastDetectionTime = 0,
     BlockedRequests = 0
 }
 
--- 在脚本最开始就初始化反抓包保护
-warn("[反抓包保护] 系统初始化 - 强制保护模式已启用")
+warn("[反抓包保护] 系统初始化")
 
--- 核心监控函数
-local function coreMonitoringDetection()
-    local highRiskProcesses = {
-        "fiddler", "wireshark", "charles", "burp", "mitmproxy", 
-        "proxyman", "httpdebugger", "packet", "sniffer", "traffic",
-        "processmonitor", "procmon", "tcpview", "netmon", "wireshark"
-    }
+-- 简化的监控检测
+local function quickSecurityCheck()
+    -- 只进行基本检查，避免复杂操作导致错误
+    local suspiciousTerms = {"fiddler", "wireshark", "charles", "burp", "mitmproxy"}
     
-    -- 进程检测（如果执行器支持）
-    if listprocesses then
-        local processes = listprocesses()
-        for _, process in ipairs(processes or {}) do
-            local lowerName = string.lower(tostring(process))
-            for _, pattern in ipairs(highRiskProcesses) do
-                if string.find(lowerName, pattern) then
-                    warn("[反抓包保护] 检测到高危监控软件: " .. pattern)
-                    return true, "发现监控软件: " .. pattern
+    -- 简单的用户代理检查（如果可用）
+    if game:GetService("HttpService").JSONEncode then
+        local success, result = pcall(function()
+            return game:HttpGet("https://httpbin.org/user-agent", true)
+        end)
+        
+        if success and result then
+            local lowerResult = result:lower()
+            for _, term in ipairs(suspiciousTerms) do
+                if lowerResult:find(term) then
+                    warn("[反抓包保护] 检测到监控工具: " .. term)
+                    return true
                 end
             end
         end
     end
     
     return false
-}
-
--- 网络流量异常检测
-local function detectTrafficAnomalies()
-    -- 检测异常的HTTP响应
-    local testUrls = {
-        "https://www.roblox.com/game/visit.ashx",
-        "https://clientsettings.roblox.com/v2/client-version"
-    }
-    
-    for _, url in ipairs(testUrls) do
-        local success, response = pcall(function()
-            return game:HttpGet(url)
-        end)
-        
-        -- 检查响应是否被篡改
-        if success and response then
-            if string.find(response:lower(), "fiddler") or 
-               string.find(response:lower(), "burp") or
-               string.find(response:lower(), "mitm") then
-                return true, "响应数据包含监控工具特征"
-            end
-        end
-    end
-    
-    return false
-}
-
--- SSL/TLS证书验证
-local function verifySSLIntegrity()
-    local secureEndpoints = {
-        "https://github.com",
-        "https://raw.githubusercontent.com",
-        "https://cdn.jsdelivr.net"
-    }
-    
-    for _, endpoint in ipairs(secureEndpoints) do
-        local success, errorMsg = pcall(function()
-            return game:HttpGet(endpoint)
-        end)
-        
-        if not success then
-            local errLower = string.lower(tostring(errorMsg))
-            if string.find(errLower, "certificate") or 
-               string.find(errLower, "ssl") or
-               string.find(errLower, "tls") or
-               string.find(errLower, "handshake") then
-                return true, "SSL证书验证失败: " .. endpoint
-            end
-        end
-    end
-    
-    return false
-}
-
--- 请求指纹识别
-local function analyzeRequestFingerprint(url)
-    -- 添加随机指纹参数
-    local fingerprint = tostring(math.random(10000, 99999)) .. "_" .. tostring(tick())
-    local parsedUrl = url
-    
-    if not string.find(url, "?") then
-        parsedUrl = url .. "?_fp=" .. fingerprint
-    else
-        parsedUrl = url .. "&_fp=" .. fingerprint
-    end
-    
-    return parsedUrl
 end
 
--- 强制反抓包检查（无法跳过）
-local function enforceAntiSpyProtection()
-    local criticalChecks = {
-        {"核心监控检测", coreMonitoringDetection},
-        {"流量异常检测", detectTrafficAnomalies},
-        {"SSL完整性验证", verifySSLIntegrity}
-    }
-    
-    local totalThreats = 0
-    
-    for _, check in ipairs(criticalChecks) do
-        local checkName, checkFunc = check[1], check[2]
-        local detected, reason = checkFunc()
-        
-        if detected then
-            totalThreats = totalThreats + 1
-            AntiSpySystem.DetectionCount = AntiSpySystem.DetectionCount + 1
-            
-            -- 输出严重警告
-            warn("[反抓包保护] ⚠️ 严重威胁: " .. checkName .. " - " .. (reason or "未知威胁"))
-            
-            -- 如果检测到高危威胁，采取紧急措施
-            if totalThreats >= 2 then
-                warn("[反抓包保护] 🚨 紧急: 检测到多个安全威胁，启动紧急保护")
-                return true, "multiple_threats_detected"
-            end
-        end
-    end
-    
-    return totalThreats > 0, totalThreats > 0 and "threats_detected" or "clean"
-end
-
--- 强制的HTTP保护包装器
-local originalHttpFunctions = {
-    HttpGet = game.HttpGet,
-    HttpPost = game.HttpPost
-}
-
--- 替换游戏原生的HTTP函数
-local function createProtectedHttpFunction(originalFunc, functionName)
+-- 安全的HTTP包装器
+local function createSafeHttpWrapper(originalFunc)
     return function(url, ...)
-        -- 先执行强制安全检查
-        local highThreat, threatType = enforceAntiSpyProtection()
-        
-        if highThreat then
+        -- 快速安全检查
+        if quickSecurityCheck() then
             AntiSpySystem.BlockedRequests = AntiSpySystem.BlockedRequests + 1
-            warn("[反抓包保护] 🛑 已阻止可疑请求: " .. tostring(url))
-            
-            -- 对于高危威胁，返回空数据
-            if threatType == "multiple_threats_detected" then
-                return ""
-            end
+            warn("[反抓包保护] 已阻止请求: " .. tostring(url))
+            return ""
         end
-        
-        -- 添加请求指纹
-        local fingerprintedUrl = analyzeRequestFingerprint(url)
         
         -- 执行原始请求
         local success, result = pcall(function()
-            return originalFunc(fingerprintedUrl, ...)
+            return originalFunc(url, ...)
         end)
         
-        if success then
-            -- 验证响应数据
-            if result and #result > 0 then
-                -- 检查响应是否包含监控工具特征
-                local lowerResult = string.lower(result)
-                if string.find(lowerResult, "fiddler") or 
-                   string.find(lowerResult, "burp") or
-                   string.find(lowerResult, "mitmproxy") then
-                    warn("[反抓包保护] ⚠️ 响应数据可能被篡改")
-                    return ""
-                end
-                return result
-            else
-                warn("[反抓包保护] ⚠️ 空响应: " .. url)
-                return ""
-            end
-        else
-            warn("[反抓包保护] ❌ 请求失败: " .. tostring(url) .. " - " .. tostring(result))
-            return ""
-        end
+        return success and result or ""
     end
 end
 
--- 强制应用保护（无法绕过）
-game.HttpGet = createProtectedHttpFunction(game.HttpGet, "HttpGet")
-if game.HttpPost then
-    game.HttpPost = createProtectedHttpFunction(game.HttpPost, "HttpPost")
-end
-
--- 保护第三方库的HTTP请求
-local function protectThirdPartyHttp()
-    if syn and syn.request then
+-- 保护第三方HTTP库（安全方式）
+local function setupHttpProtection()
+    -- 保护game:HttpGet
+    if not _G.HttpGetProtected then
+        local originalHttpGet = game.HttpGet
+        game.HttpGet = createSafeHttpWrapper(originalHttpGet)
+        _G.HttpGetProtected = true
+    end
+    
+    -- 保护syn库（如果存在）
+    if syn and syn.request and not _G.SynProtected then
         local originalSynRequest = syn.request
         syn.request = function(options)
-            -- 安全检查
-            enforceAntiSpyProtection()
-            
-            if options.Url then
-                options.Url = analyzeRequestFingerprint(options.Url)
+            if quickSecurityCheck() then
+                return {Success = false, Body = ""}
             end
-            
             return originalSynRequest(options)
         end
+        _G.SynProtected = true
     end
     
-    if request then
+    -- 保护request库（如果存在）
+    if request and not _G.RequestProtected then
         local originalRequest = request
         request = function(options)
-            -- 安全检查
-            enforceAntiSpyProtection()
-            
-            if options.Url then
-                options.Url = analyzeRequestFingerprint(options.Url)
+            if quickSecurityCheck() then
+                return {Success = false, Body = ""}
             end
-            
             return originalRequest(options)
         end
+        _G.RequestProtected = true
     end
 end
 
--- 立即应用第三方保护
-protectThirdPartyHttp()
-
--- 增强的安全加载函数（替换原有的safeLoadScript）
-local originalSafeLoadScript = safeLoadScript
-safeLoadScript = function(url, scriptName)
-    warn("[反抓包保护] 🔒 安全加载: " .. tostring(scriptName))
-    
-    -- 强制安全检查
-    local highThreat = enforceAntiSpyProtection()
-    if highThreat then
-        warn("[反抓包保护] 🛑 由于安全威胁，阻止脚本加载: " .. scriptName)
-        if WindUI then
-            WindUI:Notify({
-                Title = "安全阻止",
-                Content = "由于检测到网络监控，脚本加载被阻止",
-                Duration = 5,
-                Color = Color3.fromRGB(255, 0, 0)
-            })
-        end
-        return false, "blocked_by_antispy"
-    end
-    
-    -- 使用原始函数继续加载
-    return originalSafeLoadScript(url, scriptName)
-end
-
--- 启动时安全扫描
+-- 延迟设置保护，确保其他功能先加载
 task.spawn(function()
-    wait(3) -- 等待系统稳定
-    
-    warn("[反抓包保护] 🔍 执行启动安全扫描...")
-    local threatDetected, threatType = enforceAntiSpyProtection()
-    
-    if threatDetected then
-        warn("[反抓包保护] ⚠️ 启动扫描发现安全威胁: " .. tostring(threatType))
-        
-        if WindUI then
-            WindUI:Notify({
-                Title = "安全警告",
-                Content = "检测到网络监控环境，已启用强制保护",
-                Duration = 8,
-                Color = Color3.fromRGB(255, 165, 0)
-            })
-        end
-    else
-        warn("[反抓包保护] ✅ 启动安全扫描通过")
-    end
+    wait(2) -- 等待2秒让其他系统稳定
+    setupHttpProtection()
+    warn("[反抓包保护] ✅ 保护系统已激活")
 end)
-
--- 定期安全监控
-task.spawn(function()
-    while true do
-        wait(30) -- 每30秒检查一次
-        enforceAntiSpyProtection()
-        
-        -- 输出保护状态
-        if AntiSpySystem.DetectionCount > 0 then
-            warn("[反抓包保护] 🛡️ 保护状态: 已阻止 " .. AntiSpySystem.BlockedRequests .. " 个可疑请求")
-        end
-    end
-end)
-
--- 在工具页面显示保护状态（只读）
-Tabs.Other:Section({Title = "反抓包保护 🛡️"})
-
-Tabs.Other:Label({
-    Title = "保护状态",
-    Desc = "🔒 强制启用（无法关闭）"
-})
-
-Tabs.Other:Label({
-    Title = "威胁检测",
-    Desc = "已检测到: " .. tostring(AntiSpySystem.DetectionCount) .. " 次威胁"
-})
-
-Tabs.Other:Label({
-    Title = "阻止请求", 
-    Desc = "已阻止: " .. tostring(AntiSpySystem.BlockedRequests) .. " 个请求"
-})
-
-Tabs.Other:Button({
-    Title = "刷新保护状态",
-    Desc = "更新安全统计信息",
-    Callback = function()
-        if WindUI then
-            WindUI:Notify({
-                Title = "保护状态",
-                Content = string.format("威胁检测: %d次, 阻止请求: %d个", 
-                    AntiSpySystem.DetectionCount, AntiSpySystem.BlockedRequests),
-                Duration = 5,
-                Color = ColorSystem.primaryColor
-            })
-        end
-    end
-})
-
--- 保护系统信息
-warn("[反抓包保护] ✅ 强制反抓包保护系统已激活")
-warn("[反抓包保护] 🔒 保护模式: 始终启用（用户无法关闭）")
-warn("[反抓包保护] 🛡️ 监控: 实时流量监控中...")
 
 -- 添加缺失的函数
 local function NoFog()
