@@ -1019,79 +1019,70 @@ Tabs.General:Slider({
     end
 })
 
--- 99夜纯无伤害功能
-local Night99NoDamage = false
-local OriginalFireServer
-local OriginalInvokeServer
-
--- 99夜修复版纯无伤害
-local Night99NoDamage = false
+-- 99夜安全无伤害
+local Night99SafeNoDamage = false
+local BlockedRemotes = {}
 
 Tabs.General:Toggle({
-    Title = "99夜无伤害",
-    Desc = "修复错误的纯无伤害功能",
+    Title = "99夜安全无伤害",
+    Desc = "完全安全的伤害拦截",
     Value = false,
     Callback = function(state)
         safeCall(function()
-            Night99NoDamage = state
+            Night99SafeNoDamage = state
             
             if state then
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "无伤害已开启",
+                    Content = "安全无伤害已开启",
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
                 
-                -- 安全的远程拦截方法
-                local function safeRemoteHook()
-                    -- 只针对特定的远程事件进行拦截
-                    local damageRemotes = {}
+                -- 方法：创建代理远程来拦截调用
+                local function createProxyRemotes()
+                    -- 查找ReplicatedStorage中的远程
+                    local rs = game:GetService("ReplicatedStorage")
                     
-                    -- 查找所有可能的伤害远程
-                    for _, obj in pairs(game:GetDescendants()) do
-                        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                            local name = obj.Name:lower()
-                            if name:find("damage") or name:find("hit") or name:find("hurt") or 
-                               name:find("attack") or name:find("kill") then
-                                table.insert(damageRemotes, obj)
+                    for _, remote in pairs(rs:GetDescendants()) do
+                        if (remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")) and not BlockedRemotes[remote] then
+                            local remoteName = remote.Name:lower()
+                            
+                            -- 只拦截明确的伤害远程
+                            if remoteName:find("damage") or remoteName:find("hit") or remoteName:find("attack") then
+                                BlockedRemotes[remote] = true
+                                
+                                -- 使用pcall避免错误
+                                pcall(function()
+                                    local oldFire = remote.FireServer
+                                    remote.FireServer = function(self, ...)
+                                        if Night99SafeNoDamage then
+                                            print("拦截伤害远程: " .. remote.Name)
+                                            return nil
+                                        end
+                                        return oldFire(self, ...)
+                                    end
+                                end)
                             end
                         end
                     end
-                    
-                    -- 对每个伤害远程进行安全拦截
-                    for _, remote in pairs(damageRemotes) do
-                        pcall(function()
-                            local oldFire = remote.FireServer
-                            remote.FireServer = function(self, ...)
-                                if Night99NoDamage then
-                                    WindUI:Notify({
-                                        Title = "拦截",
-                                        Content = "已阻止伤害: " .. remote.Name,
-                                        Duration = 1,
-                                        Color = ColorSystem.warningColor
-                                    })
-                                    return nil
-                                else
-                                    return oldFire(self, ...)
-                                end
-                            end
-                        end)
-                    end
                 end
                 
-                -- 执行安全拦截
-                safeRemoteHook()
+                -- 执行代理创建
+                createProxyRemotes()
                 
             else
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "无伤害已关闭",
+                    Content = "安全无伤害已关闭",
                     Duration = 3,
                     Color = ColorSystem.primaryColor
                 })
+                
+                -- 清理
+                BlockedRemotes = {}
             end
-        end, "切换无伤害")
+        end, "切换安全无伤害")
     end
 })
 
