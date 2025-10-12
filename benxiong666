@@ -960,7 +960,44 @@ local success, err = xpcall(function()
         end
     })
 
--- 通用功能部分
+-- ========== 修复：将去雾功能移到合适位置，避免作用域冲突 ==========
+
+-- 地图透视功能
+local xrayEnabled = false
+
+local function xray()
+    for _, part in pairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and not part:IsDescendantOf(game.Players.LocalPlayer.Character) then
+            if xrayEnabled then
+                part.LocalTransparencyModifier = 0.7
+            else
+                part.LocalTransparencyModifier = 0
+            end
+        end
+    end
+end
+
+-- 去雾功能变量（提前定义，避免作用域问题）
+local fogRemoved = false
+local originalFogEnd = game.Lighting.FogEnd
+local originalFogStart = game.Lighting.FogStart
+local originalFogEnabled = game.Lighting.FogEnabled
+
+-- 监听 Lighting 变化（确保这些连接不会干扰UI）
+game.Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+    if fogRemoved then
+        game.Lighting.FogEnd = 999999
+    end
+end)
+
+game.Lighting:GetPropertyChangedSignal("FogStart"):Connect(function()
+    if fogRemoved then
+        game.Lighting.FogStart = 999999
+    end
+end)
+
+-- ========== 通用功能部分 ==========
+
 Tabs.General:Section({Title = "通用功能"})
 
 Tabs.General:Slider({
@@ -1068,24 +1105,7 @@ Tabs.General:Toggle({
     end
 })
 
-local fogRemoved = false
-local originalFogEnd = game.Lighting.FogEnd
-local originalFogStart = game.Lighting.FogStart
-local originalFogEnabled = game.Lighting.FogEnabled
-
--- 监听 Lighting 变化
-game.Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
-    if fogRemoved then
-        game.Lighting.FogEnd = 999999
-    end
-end)
-
-game.Lighting:GetPropertyChangedSignal("FogStart"):Connect(function()
-    if fogRemoved then
-        game.Lighting.FogStart = 999999
-    end
-end)
-
+-- 去雾功能放在合适的位置
 Tabs.General:Toggle({
     Title = "去雾",
     Desc = "一键去除/恢复游戏中的雾",
@@ -1113,6 +1133,27 @@ Tabs.General:Toggle({
             
             WindUI:Notify({Title = "本熊脚本", Content = "已恢复雾效", Icon = "bell", Duration = 3})
         end
+    end
+})
+
+Tabs.General:Toggle({
+    Title = "地图透视",
+    Desc = "Xray",
+    Value = false,
+    Callback = function(state) 
+        if state then
+		    xrayEnabled = true
+    xray()
+            else
+		    xrayEnabled = false
+    xray()
+            end
+        WindUI:Notify({
+            Title = "本熊脚本：",
+            Content = state and "地图透视已开启" or "地图透视已关闭",
+            Icon = state and "check" or "x",
+            Duration = 2
+        })
     end
 })
 
