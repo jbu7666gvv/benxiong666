@@ -1019,76 +1019,6 @@ Tabs.General:Slider({
     end
 })
 
--- 99夜终极纯无伤害
-local Night99UltimateNoDamage = false
-
-Tabs.General:Toggle({
-    Title = "99夜终极无伤害",
-    Desc = "最底层的伤害拦截",
-    Value = false,
-    Callback = function(state)
-        safeCall(function()
-            Night99UltimateNoDamage = state
-            
-            if state then
-                WindUI:Notify({
-                    Title = "提示",
-                    Content = "终极无伤害已开启",
-                    Duration = 3,
-                    Color = ColorSystem.successColor
-                })
-                
-                -- 使用最底层的钩子方法
-                if identifyexecutor then
-                    -- 针对不同执行器的底层钩子
-                    local success = pcall(function()
-                        if hookfunction then
-                            -- 钩住核心的远程调用函数
-                            local old
-                            old = hookfunction(debug.getupvalue(debug.getupvalue(debug.getinfo(1).func, 1), 1), function(...)
-                                if Night99UltimateNoDamage then
-                                    local args = {...}
-                                    -- 在这里拦截所有调用
-                                    return nil
-                                end
-                                return old(...)
-                            end)
-                        end
-                    end)
-                    
-                    if not success then
-                        WindUI:Notify({
-                            Title = "警告",
-                            Content = "底层钩子失败，使用备用方案",
-                            Duration = 3,
-                            Color = ColorSystem.warningColor
-                        })
-                    end
-                end
-                
-                -- 备用方案：持续监控并阻止
-                local monitorLoop
-                monitorLoop = game:GetService("RunService").Heartbeat:Connect(function()
-                    if not Night99UltimateNoDamage then
-                        monitorLoop:Disconnect()
-                        return
-                    end
-                    
-                    -- 纯无伤害，不做任何其他操作
-                end)
-                
-            else
-                WindUI:Notify({
-                    Title = "提示",
-                    Content = "终极无伤害已关闭",
-                    Duration = 3,
-                    Color = ColorSystem.primaryColor
-                })
-            end
-        end, "切换终极无伤害")
-    end
-})
-
 local Noclip = false
 local NoclipConnection
 Tabs.General:Toggle({
@@ -1120,6 +1050,150 @@ Tabs.General:Toggle({
         end, "切换穿墙")
     end
 })
+
+-- 99夜修复版纯无伤害
+local Night99FixedNoDamage = false
+
+Tabs.General:Toggle({
+    Title = "99夜修复无伤害",
+    Desc = "修复错误的纯无伤害功能",
+    Value = false,
+    Callback = function(state)
+        safeCall(function()
+            Night99FixedNoDamage = state
+            
+            if state then
+                WindUI:Notify({
+                    Title = "提示",
+                    Content = "修复无伤害已开启",
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+                
+                -- 方法1：安全的远程事件钩子
+                local function safeRemoteHook()
+                    local blockedCount = 0
+                    
+                    -- 遍历所有远程事件
+                    for _, remote in pairs(game:GetDescendants()) do
+                        if remote:IsA("RemoteEvent") then
+                            pcall(function()
+                                local oldFire = remote.FireServer
+                                remote.FireServer = function(self, ...)
+                                    if Night99FixedNoDamage then
+                                        local args = {...}
+                                        local remoteName = tostring(self):lower()
+                                        
+                                        -- 伤害相关关键词
+                                        local damageWords = {"damage", "hit", "hurt", "kill", "attack", "death"}
+                                        local shouldBlock = false
+                                        
+                                        for _, word in pairs(damageWords) do
+                                            if remoteName:find(word) then
+                                                shouldBlock = true
+                                                blockedCount = blockedCount + 1
+                                                break
+                                            end
+                                        end
+                                        
+                                        -- 检查参数
+                                        if not shouldBlock then
+                                            for _, arg in pairs(args) do
+                                                if type(arg) == "string" then
+                                                    local argLower = arg:lower()
+                                                    for _, word in pairs(damageWords) do
+                                                        if argLower:find(word) then
+                                                            shouldBlock = true
+                                                            blockedCount = blockedCount + 1
+                                                            break
+                                                        end
+                                                    end
+                                                end
+                                            end
+                                        end
+                                        
+                                        if shouldBlock then
+                                            if blockedCount % 10 == 0 then  -- 每10次显示一次通知，避免刷屏
+                                                WindUI:Notify({
+                                                    Title = "保护",
+                                                    Content = "已阻止 " .. blockedCount .. " 次伤害",
+                                                    Duration = 2,
+                                                    Color = ColorSystem.warningColor
+                                                })
+                                            end
+                                            return nil
+                                        end
+                                    end
+                                    
+                                    return oldFire(self, ...)
+                                end
+                            end)
+                        end
+                    end
+                end
+                
+                -- 执行钩子
+                safeRemoteHook()
+                
+                -- 方法2：监听新创建的远程事件
+                local connection
+                connection = game.DescendantAdded:Connect(function(descendant)
+                    if Night99FixedNoDamage and descendant:IsA("RemoteEvent") then
+                        wait(0.1)
+                        safeRemoteHook()  -- 重新应用钩子
+                    end
+                end)
+                
+                _G.NoDamageConnection = connection
+                
+            else
+                WindUI:Notify({
+                    Title = "提示",
+                    Content = "修复无伤害已关闭",
+                    Duration = 3,
+                    Color = ColorSystem.primaryColor
+                })
+                
+                if _G.NoDamageConnection then
+                    _G.NoDamageConnection:Disconnect()
+                    _G.NoDamageConnection = nil
+                end
+            end
+        end, "切换修复无伤害")
+    end
+})
+
+Tabs.General:Toggle({
+    Title = "夜视",
+    Desc = "开启/关闭夜视",
+    Default = false,
+    Callback = function(value)
+        safeCall(function()
+            if value then
+                game.Lighting.Ambient = Color3.new(1, 1, 1)
+                game.Lighting.Brightness = 1
+            else
+                game.Lighting.Ambient = Color3.new(0, 0, 0)
+                game.Lighting.Brightness = 1
+            end
+        end, "切换夜视")
+    end
+})
+
+local fogRemoved = false
+
+-- 监听 Lighting 变化
+game.Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+    if fogRemoved then
+        game.Lighting.FogEnd = 999999
+    end
+end)
+
+game.Lighting:GetPropertyChangedSignal("FogStart"):Connect(function()
+    if fogRemoved then
+        game.Lighting.FogStart = 999999
+    end
+end)
 
 Tabs.General:Toggle({
     Title = "去雾",
