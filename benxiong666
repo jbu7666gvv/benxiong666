@@ -430,6 +430,49 @@ local success, err = xpcall(function()
         end
     end
 
+    local Confirmed = false
+
+    -- 创建欢迎弹窗
+    WindUI:Popup({
+        Title = "欢迎使用本熊脚本",
+        IconThemed = true,
+        Content = "本熊脚本",
+        Buttons = {
+            {
+                Title = "退出",
+                Callback = function() 
+                    if WindUI then
+                        WindUI:Notify({
+                            Title = "提示", 
+                            Content = "已退出", 
+                            Duration = 2,
+                            Color = ColorSystem.primaryColor
+                        })
+                    end
+                end,
+                Variant = "Secondary",
+            },
+            {
+                Title = "使用",
+                Icon = "arrow-right",
+                Callback = function() 
+                    Confirmed = true 
+                    if WindUI then
+                        WindUI:Notify({
+                            Title = "欢迎", 
+                            Content = "开始使用本熊脚本", 
+                            Duration = 2,
+                            Color = ColorSystem.successColor
+                        })
+                    end
+                end,
+                Variant = "Primary",
+            }
+        }
+    })
+
+    repeat task_wait() until Confirmed
+
     -- 创建主窗口
     local Window = WindUI:CreateWindow({
         Title = "本熊脚本",
@@ -484,7 +527,7 @@ local success, err = xpcall(function()
     })
     
     Window:Tag({
-        Title = "v1.7.6",
+        Title = "v1.7.3",
         Color = Color3.fromHex("#30ff6a")
     })
     
@@ -539,7 +582,7 @@ local success, err = xpcall(function()
 
     Tabs.Home:Paragraph({
         Title = "更新内容",
-        Desc = "角色无敌测试中",
+        Desc = "• 放宽安全检查\n• 修复内容显示问题\n• 改进错误处理",
     })
 
     Tabs.Home:Section({Title = "信息"})
@@ -1025,43 +1068,38 @@ Tabs.General:Toggle({
     end
 })
 
+local originalFogEnd = game.Lighting.FogEnd
+local originalFogStart = game.Lighting.FogStart
+
 Tabs.General:Toggle({
     Title = "去雾",
     Desc = "一键去除/恢复游戏中的雾",
     Icon = "bell",
     Callback = function(State)
-        fogRemoved = State
-        
         if State then
-            game.Lighting.FogEnd = 999999
-            game.Lighting.FogStart = 999999
-            game.Lighting.FogEnabled = false
-            WindUI:Notify({Title = "本熊脚本", Content = "已去雾", Icon = "bell", Duration = 3})
+            -- 开启去雾
+            game.Lighting.FogEnd = 1000000
+            game.Lighting.FogStart = 1000000
+            WindUI:Notify({
+                Title = "本熊脚本",
+                Content = "已去雾",
+                Icon = "bell",
+                Duration = 3
+            })
         else
-            game.Lighting.FogEnabled = true
-            WindUI:Notify({Title = "本熊脚本", Content = "已恢复雾效", Icon = "bell", Duration = 3})
+            -- 关闭去雾，恢复原状
+            game.Lighting.FogEnd = originalFogEnd
+            game.Lighting.FogStart = originalFogStart
+            WindUI:Notify({
+                Title = "本熊脚本",
+                Content = "已恢复雾效",
+                Icon = "bell",
+                Duration = 3
+            })
         end
-    end
-})
-
-Tabs.General:Toggle({
-    Title = "地图透视",
-    Desc = "Xray",
-    Value = false,
-    Callback = function(state) 
-        if state then
-		    xrayEnabled = true
-    xray()
-            else
-		    xrayEnabled = false
-    xray()
-            end
-        WindUI:Notify({
-            Title = "本熊脚本：",
-            Content = state and "地图透视已开启" or "地图透视已关闭",
-            Icon = state and "check" or "x",
-            Duration = 2
-        })
+        
+        local Sound = Instance.new("Sound", game:GetService("SoundService"))
+        Sound:Play()
     end
 })
 
@@ -1087,15 +1125,9 @@ Tabs.General:Toggle({
     Title = "其他玩家发光",
     Icon = "users",
     Callback = function(t)
-        -- 将变量移到回调函数外部，使其在多次调用间保持状态
-        if not _G.PlayerGlowData then
-            _G.PlayerGlowData = {
-                playerLights = {},
-                connections = {}
-            }
-        end
-        
-        local data = _G.PlayerGlowData
+        -- 在回调函数内部定义 playerLights，避免作用域问题
+        local playerLights = {}
+        local playerAddedConnection, playerRemovingConnection
         
         if t then
             -- 开启其他玩家发光
@@ -1110,70 +1142,58 @@ Tabs.General:Toggle({
             local function addGlowToPlayer(player)
                 if player == LP then return end -- 跳过自己
                 
-                -- 如果已经存在灯光，先移除
-                if data.playerLights[player] then
-                    for _, light in ipairs(data.playerLights[player]) do
+                local character = player.Character
+                if not character then
+                    -- 如果角色不存在，等待角色加载
+                    player.CharacterAdded:Connect(function(newChar)
+                        task.wait(1) -- 等待角色完全加载
+                        addGlowToPlayer(player)
+                    end)
+                    return
+                end
+                
+                -- 移除可能存在的旧灯光
+                if playerLights[player] then
+                    for _, light in ipairs(playerLights[player]) do
                         pcall(function() light:Destroy() end)
                     end
                 end
-                data.playerLights[player] = {}
+                playerLights[player] = {}
                 
-                local function setupCharacter(character)
-                    -- 移除可能存在的旧灯光
-                    for _, part in pairs(character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            local light = part:FindFirstChild("PlayerGlowLight")
-                            if light then
-                                light:Destroy()
-                            end
-                        end
-                    end
-                    
-                    -- 给角色的所有BasePart添加灯光
-                    for _, part in pairs(character:GetDescendants()) do
-                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                            local light = Instance.new("PointLight")
-                            light.Name = "PlayerGlowLight"
-                            light.Range = 8
-                            light.Brightness = 2
-                            light.Color = Color3.fromRGB(0, 255, 255) -- 青色光
-                            light.Shadows = false
-                            light.Parent = part
-                            
-                            table.insert(data.playerLights[player], light)
-                        end
-                    end
-                    
-                    -- 给人形根部位添加更强的灯光
-                    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                    if humanoidRootPart then
-                        local mainLight = Instance.new("PointLight")
-                        mainLight.Name = "PlayerGlowLight"
-                        mainLight.Range = 15
-                        mainLight.Brightness = 3
-                        mainLight.Color = Color3.fromRGB(255, 255, 0) -- 黄色主光
-                        mainLight.Shadows = false
-                        mainLight.Parent = humanoidRootPart
+                -- 给角色的所有BasePart添加灯光
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                        local light = Instance.new("PointLight")
+                        light.Name = "PlayerGlowLight"
+                        light.Range = 8
+                        light.Brightness = 2
+                        light.Color = Color3.fromRGB(0, 255, 255) -- 青色光
+                        light.Shadows = false
+                        light.Parent = part
                         
-                        table.insert(data.playerLights[player], mainLight)
+                        table.insert(playerLights[player], light)
                     end
                 end
                 
-                local character = player.Character
-                if character then
-                    setupCharacter(character)
+                -- 给人形根部位添加更强的灯光
+                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                if humanoidRootPart then
+                    local mainLight = Instance.new("PointLight")
+                    mainLight.Name = "PlayerGlowLight"
+                    mainLight.Range = 15
+                    mainLight.Brightness = 3
+                    mainLight.Color = Color3.fromRGB(255, 255, 0) -- 黄色主光
+                    mainLight.Shadows = false
+                    mainLight.Parent = humanoidRootPart
+                    
+                    table.insert(playerLights[player], mainLight)
                 end
                 
-                -- 监听角色重新生成（只在功能开启时有效）
-                local characterConnection = player.CharacterAdded:Connect(function(newChar)
+                -- 监听角色重新生成
+                player.CharacterAdded:Connect(function(newChar)
                     task.wait(1)
-                    if t then -- 检查功能是否仍然开启
-                        setupCharacter(newChar)
-                    end
+                    addGlowToPlayer(player)
                 end)
-                
-                -- 保存连接以便清理
-                data.connections[player] = characterConnection
             end
             
             -- 给所有现有玩家添加发光
@@ -1184,24 +1204,18 @@ Tabs.General:Toggle({
             end
             
             -- 监听新玩家加入
-            data.connections.playerAdded = Players.PlayerAdded:Connect(function(player)
+            playerAddedConnection = Players.PlayerAdded:Connect(function(player)
                 task.wait(2) -- 等待玩家加载
-                if t then -- 检查功能是否仍然开启
-                    addGlowToPlayer(player)
-                end
+                addGlowToPlayer(player)
             end)
             
             -- 监听玩家离开
-            data.connections.playerRemoving = Players.PlayerRemoving:Connect(function(player)
-                if data.playerLights[player] then
-                    for _, light in ipairs(data.playerLights[player]) do
+            playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
+                if playerLights[player] then
+                    for _, light in ipairs(playerLights[player]) do
                         pcall(function() light:Destroy() end)
                     end
-                    data.playerLights[player] = nil
-                end
-                if data.connections[player] then
-                    data.connections[player]:Disconnect()
-                    data.connections[player] = nil
+                    playerLights[player] = nil
                 end
             end)
             
@@ -1215,24 +1229,36 @@ Tabs.General:Toggle({
             })
             
             -- 移除所有玩家的灯光
-            for player, lights in pairs(data.playerLights) do
-                if player and lights then
-                    for _, light in ipairs(lights) do
-                        pcall(function() light:Destroy() end)
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= LP and player.Character then
+                    for _, part in pairs(player.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            local light = part:FindFirstChild("PlayerGlowLight")
+                            if light then
+                                light:Destroy()
+                            end
+                        end
                     end
                 end
             end
             
-            -- 断开所有连接
-            for key, connection in pairs(data.connections) do
-                if connection then
-                    connection:Disconnect()
+            -- 清空 playerLights 表
+            for player, lights in pairs(playerLights) do
+                for _, light in ipairs(lights) do
+                    pcall(function() light:Destroy() end)
                 end
             end
+            playerLights = {}
             
-            -- 重置数据
-            data.playerLights = {}
-            data.connections = {}
+            -- 断开连接
+            if playerAddedConnection then
+                playerAddedConnection:Disconnect()
+                playerAddedConnection = nil
+            end
+            if playerRemovingConnection then
+                playerRemovingConnection:Disconnect()
+                playerRemovingConnection = nil
+            end
         end
     end
 })
