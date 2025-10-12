@@ -430,49 +430,6 @@ local success, err = xpcall(function()
         end
     end
 
-    local Confirmed = false
-
-    -- 创建欢迎弹窗
-    WindUI:Popup({
-        Title = "欢迎使用本熊脚本",
-        IconThemed = true,
-        Content = "本熊脚本",
-        Buttons = {
-            {
-                Title = "退出",
-                Callback = function() 
-                    if WindUI then
-                        WindUI:Notify({
-                            Title = "提示", 
-                            Content = "已退出", 
-                            Duration = 2,
-                            Color = ColorSystem.primaryColor
-                        })
-                    end
-                end,
-                Variant = "Secondary",
-            },
-            {
-                Title = "使用",
-                Icon = "arrow-right",
-                Callback = function() 
-                    Confirmed = true 
-                    if WindUI then
-                        WindUI:Notify({
-                            Title = "欢迎", 
-                            Content = "开始使用本熊脚本", 
-                            Duration = 2,
-                            Color = ColorSystem.successColor
-                        })
-                    end
-                end,
-                Variant = "Primary",
-            }
-        }
-    })
-
-    repeat task_wait() until Confirmed
-
     -- 创建主窗口
     local Window = WindUI:CreateWindow({
         Title = "本熊脚本",
@@ -527,7 +484,7 @@ local success, err = xpcall(function()
     })
     
     Window:Tag({
-        Title = "v1.7.4",
+        Title = "v1.7.6",
         Color = Color3.fromHex("#30ff6a")
     })
     
@@ -960,44 +917,7 @@ local success, err = xpcall(function()
         end
     })
 
--- ========== 修复：将去雾功能移到合适位置，避免作用域冲突 ==========
-
--- 地图透视功能
-local xrayEnabled = false
-
-local function xray()
-    for _, part in pairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not part:IsDescendantOf(game.Players.LocalPlayer.Character) then
-            if xrayEnabled then
-                part.LocalTransparencyModifier = 0.7
-            else
-                part.LocalTransparencyModifier = 0
-            end
-        end
-    end
-end
-
--- 去雾功能变量（提前定义，避免作用域问题）
-local fogRemoved = false
-local originalFogEnd = game.Lighting.FogEnd
-local originalFogStart = game.Lighting.FogStart
-local originalFogEnabled = game.Lighting.FogEnabled
-
--- 监听 Lighting 变化（确保这些连接不会干扰UI）
-game.Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
-    if fogRemoved then
-        game.Lighting.FogEnd = 999999
-    end
-end)
-
-game.Lighting:GetPropertyChangedSignal("FogStart"):Connect(function()
-    if fogRemoved then
-        game.Lighting.FogStart = 999999
-    end
-end)
-
--- ========== 通用功能部分 ==========
-
+-- 通用功能部分
 Tabs.General:Section({Title = "通用功能"})
 
 Tabs.General:Slider({
@@ -1105,7 +1025,6 @@ Tabs.General:Toggle({
     end
 })
 
--- 去雾功能放在合适的位置
 Tabs.General:Toggle({
     Title = "去雾",
     Desc = "一键去除/恢复游戏中的雾",
@@ -1114,23 +1033,12 @@ Tabs.General:Toggle({
         fogRemoved = State
         
         if State then
-            -- 保存原始值
-            originalFogEnd = game.Lighting.FogEnd
-            originalFogStart = game.Lighting.FogStart
-            originalFogEnabled = game.Lighting.FogEnabled
-            
-            -- 应用去雾效果
             game.Lighting.FogEnd = 999999
             game.Lighting.FogStart = 999999
             game.Lighting.FogEnabled = false
-            
             WindUI:Notify({Title = "本熊脚本", Content = "已去雾", Icon = "bell", Duration = 3})
         else
-            -- 恢复原始值
-            game.Lighting.FogEnd = originalFogEnd
-            game.Lighting.FogStart = originalFogStart
-            game.Lighting.FogEnabled = originalFogEnabled
-            
+            game.Lighting.FogEnabled = true
             WindUI:Notify({Title = "本熊脚本", Content = "已恢复雾效", Icon = "bell", Duration = 3})
         end
     end
