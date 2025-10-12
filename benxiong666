@@ -432,6 +432,45 @@ local success, err = xpcall(function()
 
     local Confirmed = false
 
+    -- 创建欢迎弹窗
+    WindUI:Popup({
+        Title = "欢迎使用本熊脚本",
+        IconThemed = true,
+        Content = "本熊脚本",
+        Buttons = {
+            {
+                Title = "退出",
+                Callback = function() 
+                    if WindUI then
+                        WindUI:Notify({
+                            Title = "提示", 
+                            Content = "已退出", 
+                            Duration = 2,
+                            Color = ColorSystem.primaryColor
+                        })
+                    end
+                end,
+                Variant = "Secondary",
+            },
+            {
+                Title = "使用",
+                Icon = "arrow-right",
+                Callback = function() 
+                    Confirmed = true 
+                    if WindUI then
+                        WindUI:Notify({
+                            Title = "欢迎", 
+                            Content = "开始使用本熊脚本", 
+                            Duration = 2,
+                            Color = ColorSystem.successColor
+                        })
+                    end
+                end,
+                Variant = "Primary",
+            }
+        }
+    })
+
     repeat task_wait() until Confirmed
 
     -- 创建主窗口
