@@ -920,18 +920,26 @@ local success, err = xpcall(function()
 -- 通用功能部分
 Tabs.General:Section({Title = "通用功能"})
 
-Tabs.General:Section({Title = "角色控制"})
+-- 通用功能部分 - 重新组织结构
+Tabs.General:Section({Title = "角色移动控制"})
 
 -- 移动速度
 Tabs.General:Slider({
     Title = "移速",
-    Value = {Min = 16, Max = 500, Default = 16},
+    Value = {
+        Min = 16,
+        Max = 500,
+        Default = 16,
+    },
     Increment = 1,
     Callback = function(value)
         safeCall(function()
-            local Humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if Humanoid then
-                Humanoid.WalkSpeed = value
+            local Plr = game.Players.LocalPlayer
+            if Plr.Character then
+                local Humanoid = Plr.Character:FindFirstChildOfClass("Humanoid")
+                if Humanoid then
+                    Humanoid.WalkSpeed = value
+                end
             end
         end, "设置移速")
     end
@@ -940,28 +948,58 @@ Tabs.General:Slider({
 -- 跳跃高度输入框
 Tabs.General:Textbox({
     Title = "跳跃高度",
-    Desc = "输入精确数值 (0.1-100)",
+    Desc = "输入精确数值 (0.1-100)，默认: 7.2",
     Default = "7.2",
-    Placeholder = "输入跳跃高度...",
+    Placeholder = "例如: 10.5, 25, 50...",
     Callback = function(value)
         safeCall(function()
             local jumpValue = tonumber(value)
-            if jumpValue and jumpValue >= 0.1 and jumpValue <= 100 then
-                local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            
+            if not jumpValue then
+                WindUI:Notify({
+                    Title = "输入错误",
+                    Content = "请输入有效的数字",
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+                return
+            end
+            
+            if jumpValue < 0.1 or jumpValue > 100 then
+                WindUI:Notify({
+                    Title = "范围错误",
+                    Content = "跳跃高度必须在 0.1 到 100 之间",
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
+                return
+            end
+            
+            local player = game.Players.LocalPlayer
+            if player and player.Character then
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid.UseJumpPower = false
                     humanoid.JumpHeight = jumpValue
+                    
                     WindUI:Notify({
-                        Title = "成功",
-                        Content = string.format("跳跃高度: %.1f", jumpValue),
-                        Duration = 2,
+                        Title = "设置成功",
+                        Content = string.format("跳跃高度: %.2f", jumpValue),
+                        Duration = 3,
                         Color = ColorSystem.successColor
+                    })
+                else
+                    WindUI:Notify({
+                        Title = "错误",
+                        Content = "未找到 Humanoid 组件",
+                        Duration = 3,
+                        Color = ColorSystem.errorColor
                     })
                 end
             else
                 WindUI:Notify({
                     Title = "错误",
-                    Content = "请输入0.1-100之间的数字",
+                    Content = "角色未加载完成",
                     Duration = 3,
                     Color = ColorSystem.errorColor
                 })
@@ -973,7 +1011,11 @@ Tabs.General:Textbox({
 -- 重力
 Tabs.General:Slider({
     Title = "重力",
-    Value = {Min = 0.1, Max = 500.0, Default = 196.2},
+    Value = {
+        Min = 0.1,
+        Max = 500.0,
+        Default = 196.2,
+    },
     Step = 0.1,
     Callback = function(value)
         safeCall(function()
@@ -982,6 +1024,7 @@ Tabs.General:Slider({
     end
 })
 
+-- 穿墙功能
 local Noclip = false
 local NoclipConnection
 Tabs.General:Toggle({
@@ -1014,6 +1057,7 @@ Tabs.General:Toggle({
     end
 })
 
+-- 夜视功能
 Tabs.General:Toggle({
     Title = "夜视",
     Desc = "开启/关闭夜视",
@@ -1031,9 +1075,8 @@ Tabs.General:Toggle({
     end
 })
 
+-- 去雾功能
 local fogRemoved = false
-
--- 监听 Lighting 变化
 game.Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
     if fogRemoved then
         game.Lighting.FogEnd = 999999
@@ -1065,6 +1108,7 @@ Tabs.General:Toggle({
     end
 })
 
+-- 伤害倍数
 Tabs.General:Slider({
     Title = "伤害倍数",
     Value = {
@@ -1083,11 +1127,11 @@ Tabs.General:Slider({
     end
 })
 
+-- 玩家发光功能
 Tabs.General:Toggle({
     Title = "其他玩家发光",
     Icon = "users",
     Callback = function(t)
-        -- 将变量移到回调函数外部，使其在多次调用间保持状态
         if not _G.PlayerGlowData then
             _G.PlayerGlowData = {
                 playerLights = {},
@@ -1098,7 +1142,6 @@ Tabs.General:Toggle({
         local data = _G.PlayerGlowData
         
         if t then
-            -- 开启其他玩家发光
             WindUI:Notify({
                 Title = "提示",
                 Content = "其他玩家发光已开启",
@@ -1106,11 +1149,9 @@ Tabs.General:Toggle({
                 Color = ColorSystem.successColor
             })
             
-            -- 给玩家添加发光效果的函数
             local function addGlowToPlayer(player)
-                if player == LP then return end -- 跳过自己
+                if player == LP then return end
                 
-                -- 如果已经存在灯光，先移除
                 if data.playerLights[player] then
                     for _, light in ipairs(data.playerLights[player]) do
                         pcall(function() light:Destroy() end)
@@ -1119,7 +1160,6 @@ Tabs.General:Toggle({
                 data.playerLights[player] = {}
                 
                 local function setupCharacter(character)
-                    -- 移除可能存在的旧灯光
                     for _, part in pairs(character:GetDescendants()) do
                         if part:IsA("BasePart") then
                             local light = part:FindFirstChild("PlayerGlowLight")
@@ -1129,14 +1169,13 @@ Tabs.General:Toggle({
                         end
                     end
                     
-                    -- 给角色的所有BasePart添加灯光
                     for _, part in pairs(character:GetDescendants()) do
                         if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                             local light = Instance.new("PointLight")
                             light.Name = "PlayerGlowLight"
                             light.Range = 8
                             light.Brightness = 2
-                            light.Color = Color3.fromRGB(0, 255, 255) -- 青色光
+                            light.Color = Color3.fromRGB(0, 255, 255)
                             light.Shadows = false
                             light.Parent = part
                             
@@ -1144,14 +1183,13 @@ Tabs.General:Toggle({
                         end
                     end
                     
-                    -- 给人形根部位添加更强的灯光
                     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                     if humanoidRootPart then
                         local mainLight = Instance.new("PointLight")
                         mainLight.Name = "PlayerGlowLight"
                         mainLight.Range = 15
                         mainLight.Brightness = 3
-                        mainLight.Color = Color3.fromRGB(255, 255, 0) -- 黄色主光
+                        mainLight.Color = Color3.fromRGB(255, 255, 0)
                         mainLight.Shadows = false
                         mainLight.Parent = humanoidRootPart
                         
@@ -1164,34 +1202,29 @@ Tabs.General:Toggle({
                     setupCharacter(character)
                 end
                 
-                -- 监听角色重新生成（只在功能开启时有效）
                 local characterConnection = player.CharacterAdded:Connect(function(newChar)
                     task.wait(1)
-                    if t then -- 检查功能是否仍然开启
+                    if t then
                         setupCharacter(newChar)
                     end
                 end)
                 
-                -- 保存连接以便清理
                 data.connections[player] = characterConnection
             end
             
-            -- 给所有现有玩家添加发光
             for _, player in pairs(Players:GetPlayers()) do
                 if player ~= LP then
                     addGlowToPlayer(player)
                 end
             end
             
-            -- 监听新玩家加入
             data.connections.playerAdded = Players.PlayerAdded:Connect(function(player)
-                task.wait(2) -- 等待玩家加载
-                if t then -- 检查功能是否仍然开启
+                task.wait(2)
+                if t then
                     addGlowToPlayer(player)
                 end
             end)
             
-            -- 监听玩家离开
             data.connections.playerRemoving = Players.PlayerRemoving:Connect(function(player)
                 if data.playerLights[player] then
                     for _, light in ipairs(data.playerLights[player]) do
@@ -1206,7 +1239,6 @@ Tabs.General:Toggle({
             end)
             
         else
-            -- 关闭其他玩家发光
             WindUI:Notify({
                 Title = "提示",
                 Content = "其他玩家发光已关闭",
@@ -1214,7 +1246,6 @@ Tabs.General:Toggle({
                 Color = ColorSystem.primaryColor
             })
             
-            -- 移除所有玩家的灯光
             for player, lights in pairs(data.playerLights) do
                 if player and lights then
                     for _, light in ipairs(lights) do
@@ -1223,19 +1254,20 @@ Tabs.General:Toggle({
                 end
             end
             
-            -- 断开所有连接
             for key, connection in pairs(data.connections) do
                 if connection then
                     connection:Disconnect()
                 end
             end
             
-            -- 重置数据
             data.playerLights = {}
             data.connections = {}
         end
     end
 })
+
+-- 其他功能放在新的Section中
+Tabs.General:Section({Title = "脚本功能"})
 
 Tabs.General:Button({
     Title = "死亡笔记",
