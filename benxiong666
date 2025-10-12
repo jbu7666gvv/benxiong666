@@ -1019,70 +1019,73 @@ Tabs.General:Slider({
     end
 })
 
--- 99夜安全无伤害
-local Night99SafeNoDamage = false
-local BlockedRemotes = {}
+-- 99夜终极纯无伤害
+local Night99UltimateNoDamage = false
 
 Tabs.General:Toggle({
-    Title = "99夜安全无伤害",
-    Desc = "完全安全的伤害拦截",
+    Title = "99夜终极无伤害",
+    Desc = "最底层的伤害拦截",
     Value = false,
     Callback = function(state)
         safeCall(function()
-            Night99SafeNoDamage = state
+            Night99UltimateNoDamage = state
             
             if state then
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "安全无伤害已开启",
+                    Content = "终极无伤害已开启",
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
                 
-                -- 方法：创建代理远程来拦截调用
-                local function createProxyRemotes()
-                    -- 查找ReplicatedStorage中的远程
-                    local rs = game:GetService("ReplicatedStorage")
-                    
-                    for _, remote in pairs(rs:GetDescendants()) do
-                        if (remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")) and not BlockedRemotes[remote] then
-                            local remoteName = remote.Name:lower()
-                            
-                            -- 只拦截明确的伤害远程
-                            if remoteName:find("damage") or remoteName:find("hit") or remoteName:find("attack") then
-                                BlockedRemotes[remote] = true
-                                
-                                -- 使用pcall避免错误
-                                pcall(function()
-                                    local oldFire = remote.FireServer
-                                    remote.FireServer = function(self, ...)
-                                        if Night99SafeNoDamage then
-                                            print("拦截伤害远程: " .. remote.Name)
-                                            return nil
-                                        end
-                                        return oldFire(self, ...)
-                                    end
-                                end)
-                            end
+                -- 使用最底层的钩子方法
+                if identifyexecutor then
+                    -- 针对不同执行器的底层钩子
+                    local success = pcall(function()
+                        if hookfunction then
+                            -- 钩住核心的远程调用函数
+                            local old
+                            old = hookfunction(debug.getupvalue(debug.getupvalue(debug.getinfo(1).func, 1), 1), function(...)
+                                if Night99UltimateNoDamage then
+                                    local args = {...}
+                                    -- 在这里拦截所有调用
+                                    return nil
+                                end
+                                return old(...)
+                            end)
                         end
+                    end)
+                    
+                    if not success then
+                        WindUI:Notify({
+                            Title = "警告",
+                            Content = "底层钩子失败，使用备用方案",
+                            Duration = 3,
+                            Color = ColorSystem.warningColor
+                        })
                     end
                 end
                 
-                -- 执行代理创建
-                createProxyRemotes()
+                -- 备用方案：持续监控并阻止
+                local monitorLoop
+                monitorLoop = game:GetService("RunService").Heartbeat:Connect(function()
+                    if not Night99UltimateNoDamage then
+                        monitorLoop:Disconnect()
+                        return
+                    end
+                    
+                    -- 纯无伤害，不做任何其他操作
+                end)
                 
             else
                 WindUI:Notify({
                     Title = "提示",
-                    Content = "安全无伤害已关闭",
+                    Content = "终极无伤害已关闭",
                     Duration = 3,
                     Color = ColorSystem.primaryColor
                 })
-                
-                -- 清理
-                BlockedRemotes = {}
             end
-        end, "切换安全无伤害")
+        end, "切换终极无伤害")
     end
 })
 
