@@ -527,7 +527,7 @@ local success, err = xpcall(function()
     })
     
     Window:Tag({
-        Title = "v1.7.7",
+        Title = "v1.7.4",
         Color = Color3.fromHex("#30ff6a")
     })
     
@@ -582,7 +582,7 @@ local success, err = xpcall(function()
 
     Tabs.Home:Paragraph({
         Title = "更新内容",
-        Desc = "",
+        Desc = "角色无敌测试中",
     })
 
     Tabs.Home:Section({Title = "信息"})
@@ -960,35 +960,6 @@ local success, err = xpcall(function()
         end
     })
 
--- 地图透视功能
-local xrayEnabled = false
-
-local function xray()
-    local success, err = pcall(function()
-        local character = game.Players.LocalPlayer.Character
-        if not character then return end
-        
-        for _, part in pairs(workspace:GetDescendants()) do
-            if part:IsA("BasePart") then
-                -- 跳过玩家自己的部件
-                if part:IsDescendantOf(character) then
-                    continue
-                end
-                
-                if xrayEnabled then
-                    part.LocalTransparencyModifier = 0.7  -- 半透明
-                else
-                    part.LocalTransparencyModifier = 0    -- 不透明
-                end
-            end
-        end
-    end)
-    
-    if not success then
-        warn("xray函数错误: " .. tostring(err))
-    end
-end
-
 -- 通用功能部分
 Tabs.General:Section({Title = "通用功能"})
 
@@ -1142,19 +1113,6 @@ Tabs.General:Toggle({
             
             WindUI:Notify({Title = "本熊脚本", Content = "已恢复雾效", Icon = "bell", Duration = 3})
         end
-    end
-})
-
-Tabs.General:Toggle({
-    Title = "地图透视",
-    Desc = "Xray (功能修复中)",
-    Value = false,
-    Callback = function(state) 
-        WindUI:Notify({
-            Title = "提示",
-            Content = "地图透视功能正在修复中",
-            Duration = 3
-        })
     end
 })
 
