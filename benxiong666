@@ -180,100 +180,12 @@ task.spawn(function()
     end
 end)
 
--- 修复的音效系统
-local SoundSystem = {
-    Enabled = true,
-    Volume = 0.5,
-    LastPlayTime = 0,
-    MinInterval = 0.1 -- 最小播放间隔，避免音效重叠
-}
-
-local function playNotificationSound(soundType)
-    if not SoundSystem.Enabled then
-        return
-    end
-    
-    -- 防止音效重叠
-    local currentTime = tick()
-    if currentTime - SoundSystem.LastPlayTime < SoundSystem.MinInterval then
-        return
-    end
-    SoundSystem.LastPlayTime = currentTime
-    
-    -- 使用更可靠的音效资源
-    local soundMap = {
-        success = "rbxassetid://15933731003", -- 成功音效
-        error = "rbxassetid://15933724671",   -- 错误音效
-        warning = "rbxassetid://15933724671", -- 警告音效（使用错误音效）
-        info = "rbxassetid://15933724671",    -- 信息音效
-        click = "rbxassetid://15933724671",   -- 点击音效
-        bell = "rbxassetid://15933724671",    -- 铃声音效
-        welcome = "rbxassetid://15933724671"  -- 欢迎音效
-    }
-    
-    local soundId = soundMap[soundType] or soundMap.info
-    
-    -- 使用更安全的音效播放方法
-    local success, result = pcall(function()
-        -- 检查音效服务是否可用
-        local soundService = game:GetService("SoundService")
-        if not soundService then
-            return false
-        end
-        
-        -- 创建音效实例
-        local sound = Instance.new("Sound")
-        sound.SoundId = soundId
-        sound.Volume = SoundSystem.Volume
-        sound.Parent = soundService
-        
-        -- 等待音效加载
-        sound.Loaded:Wait()
-        
-        -- 播放音效
-        sound:Play()
-        
-        -- 播放完成后自动清理
-        sound.Ended:Connect(function()
-            sound:Destroy()
-        end)
-        
-        -- 安全超时清理
-        delay(5, function()
-            if sound and sound.Parent then
-                sound:Destroy()
-            end
-        end)
-        
-        return true
-    end)
-    
-    if not success then
-        -- 如果音效播放失败，尝试备用方案
-        warn("音效播放失败: " .. tostring(soundType))
-        
-        -- 备用方案：使用系统提示音（如果有）
-        pcall(function()
-            if game:GetService("StarterGui"):GetCore("SendNotification") then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "提示",
-                    Text = "操作" .. (soundType == "success" and "成功" or "完成"),
-                    Duration = 1
-                })
-            end
-        end)
-    end
-    
-    return success
-end
+-- 立即继续UI加载，不等待聊天功能
 
 -- 增强的错误处理
 local function enhancedErrorHandler(err)
     local errMsg = "本熊脚本错误: " .. tostring(err)
     warn(errMsg)
-    
-    -- 播放错误音效
-    playNotificationSound("error")
     
     -- 尝试使用基本通知系统
     local success, notifyErr = pcall(function()
@@ -357,11 +269,6 @@ local success, err = xpcall(function()
                 error("没有可用的剪贴板方法")
             end
         end)
-        
-        if success then
-            playNotificationSound("click") -- 复制成功音效
-        end
-        
         return success
     end
 
@@ -369,7 +276,6 @@ local success, err = xpcall(function()
     local function safeCall(func, errorMessage)
         local success, err = pcall(func)
         if not success then
-            playNotificationSound("error") -- 错误音效
             if WindUI then
                 WindUI:Notify({
                     Title = "错误", 
@@ -380,27 +286,8 @@ local success, err = xpcall(function()
             else
                 warn(errorMessage .. ": " .. tostring(err))
             end
-        else
-            playNotificationSound("success") -- 成功音效
         end
         return success
-    end
-    
-    -- 带音效的通知包装函数
-    local function notifyWithSound(options)
-        -- 先播放音效
-        if options.Color == ColorSystem.successColor then
-            playNotificationSound("success")
-        elseif options.Color == ColorSystem.errorColor then
-            playNotificationSound("error")
-        elseif options.Color == ColorSystem.warningColor then
-            playNotificationSound("warning")
-        else
-            playNotificationSound("info")
-        end
-        
-        -- 然后显示通知
-        WindUI:Notify(options)
     end
     
     -- 宽松的WindUI加载函数
@@ -415,7 +302,6 @@ local success, err = xpcall(function()
         if mainSource then
             local success, lib = pcall(loadstring(mainSource))
             if success and lib then
-                playNotificationSound("success") -- 库加载成功音效
                 return lib
             end
         end
@@ -426,7 +312,6 @@ local success, err = xpcall(function()
             if source then
                 local success, lib = pcall(loadstring(source))
                 if success and lib then
-                    playNotificationSound("success") -- 库加载成功音效
                     return lib
                 end
             end
@@ -434,7 +319,6 @@ local success, err = xpcall(function()
         
         -- 如果所有源都失败，尝试直接加载（降级方案）
         warn("所有WindUI源加载失败，尝试降级方案")
-        playNotificationSound("error") -- 库加载失败音效
         return nil, "无法从任何源加载WindUI库"
     end
     
@@ -466,7 +350,6 @@ local success, err = xpcall(function()
     if not WindUISuccess or not WindUI then
         local errMsg = "WindUI 加载失败: " .. tostring(WindUI)
         warn(errMsg)
-        playNotificationSound("error") -- 严重错误音效
         -- 使用基本错误提示
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "库加载失败",
@@ -480,11 +363,10 @@ local success, err = xpcall(function()
     local function safeLoadScript(url, scriptName)
         if not WindUI then 
             warn("WindUI未初始化，无法加载脚本: " .. scriptName)
-            playNotificationSound("error")
             return false, "WindUI未初始化" 
         end
         
-        notifyWithSound({
+        WindUI:Notify({
             Title = "提示", 
             Content = "正在加载 " .. scriptName .. "...", 
             Duration = 2,
@@ -529,7 +411,7 @@ local success, err = xpcall(function()
         end)
         
         if success and result then
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "成功", 
                 Content = scriptName .. " 加载完成", 
                 Duration = 3,
@@ -538,7 +420,7 @@ local success, err = xpcall(function()
             return true
         else
             local errorMsg = success and result or "网络请求失败"
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "错误", 
                 Content = scriptName .. " 加载失败: " .. errorMsg, 
                 Duration = 5,
@@ -551,7 +433,6 @@ local success, err = xpcall(function()
     local Confirmed = false
 
     -- 创建欢迎弹窗
-    playNotificationSound("welcome") -- 欢迎音效
     WindUI:Popup({
         Title = "欢迎使用本熊脚本",
         IconThemed = true,
@@ -560,9 +441,8 @@ local success, err = xpcall(function()
             {
                 Title = "退出",
                 Callback = function() 
-                    playNotificationSound("click") -- 点击音效
                     if WindUI then
-                        notifyWithSound({
+                        WindUI:Notify({
                             Title = "提示", 
                             Content = "已退出", 
                             Duration = 2,
@@ -576,10 +456,9 @@ local success, err = xpcall(function()
                 Title = "使用",
                 Icon = "arrow-right",
                 Callback = function() 
-                    playNotificationSound("success") -- 确认音效
                     Confirmed = true 
                     if WindUI then
-                        notifyWithSound({
+                        WindUI:Notify({
                             Title = "欢迎", 
                             Content = "开始使用本熊脚本", 
                             Duration = 2,
@@ -595,7 +474,6 @@ local success, err = xpcall(function()
     repeat task_wait() until Confirmed
 
     -- 创建主窗口
-    playNotificationSound("info") -- 界面加载音效
     local Window = WindUI:CreateWindow({
         Title = "本熊脚本",
         IconThemed = true,
@@ -608,14 +486,14 @@ local success, err = xpcall(function()
             Enabled = true,
             Callback = function() 
                 if safeSetClipboard("roblox本熊") then
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "提示", 
                         Content = "已复制作者信息", 
                         Duration = 2,
                         Color = ColorSystem.primaryColor
                     })
                 else
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "错误", 
                         Content = "剪贴板复制失败", 
                         Duration = 2,
@@ -661,7 +539,7 @@ local success, err = xpcall(function()
     -- 创建全屏按钮
     Window:CreateTopbarButton("全屏", "battery-plus", function() 
         Window:ToggleFullscreen()
-        notifyWithSound({
+        WindUI:Notify({
             Title = "提示", 
             Content = "切换全屏模式", 
             Duration = 2,
@@ -714,14 +592,14 @@ local success, err = xpcall(function()
         Desc = "点击复制QQ群号",
         Callback = function()
             if safeSetClipboard("1038615008") then
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "成功", 
                     Content = "QQ群号已复制到剪贴板", 
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
             else
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "错误", 
                     Content = "剪贴板复制失败", 
                     Duration = 3,
@@ -736,14 +614,14 @@ local success, err = xpcall(function()
         Desc = "点击复制快手号",
         Callback = function()
             if safeSetClipboard("3460680158") then
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "成功", 
                     Content = "快手号已复制到剪贴板", 
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
             else
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "错误", 
                     Content = "剪贴板复制失败", 
                     Duration = 3,
@@ -758,14 +636,14 @@ local success, err = xpcall(function()
         Desc = "点击复制快手号",
         Callback = function()
             if safeSetClipboard("lousun7891") then
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "成功", 
                     Content = "快手号已复制到剪贴板", 
                     Duration = 3,
                     Color = ColorSystem.successColor
                 })
             else
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "错误", 
                     Content = "剪贴板复制失败", 
                     Duration = 3,
@@ -788,10 +666,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(game:GetService("Players").LocalPlayer.DisplayName)
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -813,10 +690,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(game:GetService("Players").LocalPlayer.Name)
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -838,10 +714,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(game:GetService("Players").LocalPlayer.UserId)
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -863,10 +738,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(game:GetService("Players").LocalPlayer.AccountAge)
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -888,10 +762,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name)
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -913,10 +786,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(tostring(game.PlaceId))
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -940,10 +812,9 @@ local success, err = xpcall(function()
                 Variant = "Primary",
                 Callback = function() 
                     setclipboard(getExecutorName())
-                    playNotificationSound("click")
                     local Sound = Instance.new("Sound",game:GetService("SoundService"))
                     Sound:Play()
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "本熊脚本",
                         Content = "已成功复制！",
                         Icon = "bell",
@@ -1148,6 +1019,70 @@ Tabs.General:Slider({
     end
 })
 
+-- 99夜简单纯无伤害
+local Night99SimpleNoDamage = false
+
+Tabs.General:Toggle({
+    Title = "99夜简单无伤害",
+    Desc = "最简单的伤害拦截",
+    Value = false,
+    Callback = function(state)
+        safeCall(function()
+            Night99SimpleNoDamage = state
+            
+            if state then
+                WindUI:Notify({
+                    Title = "提示",
+                    Content = "简单无伤害已开启",
+                    Duration = 3,
+                    Color = ColorSystem.successColor
+                })
+                
+                -- 最简单的伤害拦截
+                local function simpleDamageBlock()
+                    -- 监听所有远程事件
+                    for _, obj in pairs(game:GetDescendants()) do
+                        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                            pcall(function()
+                                local oldFire = obj.FireServer
+                                obj.FireServer = function(self, ...)
+                                    if Night99SimpleNoDamage then
+                                        local args = {...}
+                                        local shouldBlock = false
+                                        
+                                        -- 只检查远程名称
+                                        local name = tostring(self):lower()
+                                        if name:find("damage") or name:find("hit") or name:find("hurt") then
+                                            shouldBlock = true
+                                        end
+                                        
+                                        if not shouldBlock then
+                                            return oldFire(self, ...)
+                                        end
+                                    else
+                                        return oldFire(self, ...)
+                                    end
+                                end
+                            end)
+                        end
+                    end
+                end
+                
+                -- 执行拦截
+                simpleDamageBlock()
+                
+            else
+                WindUI:Notify({
+                    Title = "提示",
+                    Content = "简单无伤害已关闭",
+                    Duration = 3,
+                    Color = ColorSystem.primaryColor
+                })
+            end
+        end, "切换简单无伤害")
+    end
+})
+
 local Noclip = false
 local NoclipConnection
 Tabs.General:Toggle({
@@ -1157,7 +1092,6 @@ Tabs.General:Toggle({
         safeCall(function()
             if state then
                 Noclip = true
-                playNotificationSound("success")
                 if NoclipConnection then
                     NoclipConnection:Disconnect()
                 end
@@ -1172,7 +1106,6 @@ Tabs.General:Toggle({
                 end)
             else
                 Noclip = false
-                playNotificationSound("info")
                 if NoclipConnection then
                     NoclipConnection:Disconnect()
                     NoclipConnection = nil
@@ -1193,22 +1126,10 @@ Tabs.General:Toggle({
             game.Lighting.FogEnd = 999999
             game.Lighting.FogStart = 999999
             game.Lighting.FogEnabled = false
-            notifyWithSound({
-                Title = "本熊脚本", 
-                Content = "已去雾", 
-                Icon = "bell", 
-                Duration = 3,
-                Color = ColorSystem.successColor
-            })
+            WindUI:Notify({Title = "本熊脚本", Content = "已去雾", Icon = "bell", Duration = 3})
         else
             game.Lighting.FogEnabled = true
-            notifyWithSound({
-                Title = "本熊脚本", 
-                Content = "已恢复雾效", 
-                Icon = "bell", 
-                Duration = 3,
-                Color = ColorSystem.primaryColor
-            })
+            WindUI:Notify({Title = "本熊脚本", Content = "已恢复雾效", Icon = "bell", Duration = 3})
         end
     end
 })
@@ -1222,7 +1143,7 @@ Tabs.General:Slider({
     },
     Increment = 1,
     Callback = function(value)
-        notifyWithSound({
+        WindUI:Notify({
             Title = "设置", 
             Content = "伤害倍数设置为: " .. tostring(value), 
             Duration = 2,
@@ -1247,8 +1168,7 @@ Tabs.General:Toggle({
         
         if t then
             -- 开启其他玩家发光
-            playNotificationSound("success")
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "提示",
                 Content = "其他玩家发光已开启",
                 Duration = 2,
@@ -1356,8 +1276,7 @@ Tabs.General:Toggle({
             
         else
             -- 关闭其他玩家发光
-            playNotificationSound("info")
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "提示",
                 Content = "其他玩家发光已关闭",
                 Duration = 2,
@@ -1575,7 +1494,7 @@ Tabs.General:Button({
             s.Intensity = 0.01
             s.Spread = 0.146
 
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "成功",
                 Content = "RTX Graphics loaded! Created by BrickoIcko",
                 Duration = 3,
@@ -1690,7 +1609,7 @@ Tabs.FlyAndTeleport:Button({
             end
             
             if #playerNames == 0 then
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "错误",
                     Content = "没有其他玩家可传送",
                     Duration = 3,
@@ -1700,7 +1619,7 @@ Tabs.FlyAndTeleport:Button({
             end
             
             -- 这里可以添加玩家选择界面
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "提示",
                 Content = "传送功能需要选择目标玩家",
                 Duration = 3,
@@ -1720,7 +1639,7 @@ Tabs.FlyAndTeleport:Button({
                 local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                 if humanoidRootPart then
                     humanoidRootPart.CFrame = CFrame.new(0, 100, 0)
-                    notifyWithSound({
+                    WindUI:Notify({
                         Title = "成功",
                         Content = "已传送到空中",
                         Duration = 3,
@@ -1738,7 +1657,7 @@ Tabs.FlyAndTeleport:Button({
         Title = "MIRANDA HUB (无卡密)",
         Desc = "汉化",
         Callback = function()
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "提示", 
                 Content = "正在加载脚本...", 
                 Duration = 2,
@@ -1755,7 +1674,7 @@ Tabs.FlyAndTeleport:Button({
         Title = "重新加载界面",
         Desc = "重新加载用户界面",
         Callback = function()
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "提示", 
                 Content = "重新加载界面中...", 
                 Duration = 2,
@@ -1806,7 +1725,7 @@ Tabs.FlyAndTeleport:Button({
             
             if not success then
                 -- 方法2：简单的重新初始化
-                notifyWithSound({
+                WindUI:Notify({
                     Title = "错误", 
                     Content = "完全重启失败，请手动重新执行脚本", 
                     Duration = 5,
@@ -1821,7 +1740,7 @@ Tabs.FlyAndTeleport:Button({
         Desc = "清理系统缓存",
         Callback = function()
             collectgarbage("collect")
-            notifyWithSound({
+            WindUI:Notify({
                 Title = "成功", 
                 Content = "系统缓存已清理", 
                 Duration = 3,
@@ -1859,7 +1778,7 @@ Tabs.Other:Button({
     Callback = function()
         local inviteLink = "roblox://experiences/start?placeId=" .. game.PlaceId .. "&gameInstanceId=" .. game.JobId
         setclipboard(inviteLink)
-        notifyWithSound({
+        WindUI:Notify({
             Title = "邀请链接已复制",
             Content = "链接已复制到剪贴板",
             Duration = 3
@@ -1872,7 +1791,7 @@ Tabs.Other:Button({
     Desc = "复制当前服务器的Job ID到剪贴板",
     Callback = function()
         setclipboard(game.JobId)
-        notifyWithSound({
+        WindUI:Notify({
             Title = "服务器ID已复制",
             Content = "Job ID: " .. game.JobId,
             Duration = 3
@@ -1891,7 +1810,7 @@ Tabs.Other:Button({
         local jobId = game.JobId
         local serverType = game:GetService("RunService"):IsStudio() and "Studio" or "Live"
         
-        notifyWithSound({
+        WindUI:Notify({
             Title = "服务器信息",
             Content = string.format("玩家数量: %d/%d\nPlace ID: %d\nJob ID: %s\n服务器类型: %s", #players, maxPlayers, placeId, jobId, serverType),
             Duration = 10
@@ -1910,13 +1829,11 @@ Tabs.Other:Slider({
     Callback = function(value)
         Window:ToggleTransparency(tonumber(value) > 0)
         WindUI.TransparencyValue = tonumber(value)
-        playNotificationSound("click")
     end
 })
 
     -- 完成通知
-    playNotificationSound("bell") -- 完成音效
-    notifyWithSound({
+    WindUI:Notify({
         Title = "本熊脚本", 
         Content = "界面加载完成！", 
         Duration = 4,
