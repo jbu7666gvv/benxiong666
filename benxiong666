@@ -527,7 +527,7 @@ local success, err = xpcall(function()
     })
     
     Window:Tag({
-        Title = "v1.7.6",
+        Title = "v1.7.7",
         Color = Color3.fromHex("#30ff6a")
     })
     
@@ -1147,20 +1147,14 @@ Tabs.General:Toggle({
 
 Tabs.General:Toggle({
     Title = "地图透视",
-    Desc = "Xray",
+    Desc = "Xray (功能修复中)",
     Value = false,
     Callback = function(state) 
-        safeCall(function()
-            xrayEnabled = state
-            xray()
-            
-            WindUI:Notify({
-                Title = "本熊脚本：",
-                Content = state and "地图透视已开启" or "地图透视已关闭",
-                Icon = state and "check" or "x",
-                Duration = 2
-            })
-        end, "切换地图透视")
+        WindUI:Notify({
+            Title = "提示",
+            Content = "地图透视功能正在修复中",
+            Duration = 3
+        })
     end
 })
 
