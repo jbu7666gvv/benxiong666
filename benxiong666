@@ -527,7 +527,7 @@ local success, err = xpcall(function()
     })
     
     Window:Tag({
-        Title = "v1.7.4",
+        Title = "v1.7.5",
         Color = Color3.fromHex("#30ff6a")
     })
     
@@ -582,7 +582,7 @@ local success, err = xpcall(function()
 
     Tabs.Home:Paragraph({
         Title = "更新内容",
-        Desc = "角色无敌测试中",
+        Desc = "",
     })
 
     Tabs.Home:Section({Title = "信息"})
@@ -1136,19 +1136,17 @@ Tabs.General:Toggle({
     Desc = "Xray",
     Value = false,
     Callback = function(state) 
-        if state then
-		    xrayEnabled = true
-    xray()
-            else
-		    xrayEnabled = false
-    xray()
-            end
-        WindUI:Notify({
-            Title = "本熊脚本：",
-            Content = state and "地图透视已开启" or "地图透视已关闭",
-            Icon = state and "check" or "x",
-            Duration = 2
-        })
+        safeCall(function()
+            xrayEnabled = state
+            xray()
+            
+            WindUI:Notify({
+                Title = "本熊脚本：",
+                Content = state and "地图透视已开启" or "地图透视已关闭",
+                Icon = state and "check" or "x",
+                Duration = 2
+            })
+        end, "切换地图透视")
     end
 })
 
