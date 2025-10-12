@@ -920,88 +920,60 @@ local success, err = xpcall(function()
 -- 通用功能部分
 Tabs.General:Section({Title = "通用功能"})
 
-Tabs.General:Section({Title = "移动速度设置"})
+Tabs.General:Section({Title = "角色控制"})
 
+-- 移动速度
 Tabs.General:Slider({
     Title = "移速",
-    Value = {
-        Min = 16,
-        Max = 500,
-        Default = 16,
-    },
+    Value = {Min = 16, Max = 500, Default = 16},
     Increment = 1,
     Callback = function(value)
         safeCall(function()
-            local Plr = game.Players.LocalPlayer
-            if Plr.Character then
-                local Humanoid = Plr.Character:FindFirstChildOfClass("Humanoid")
-                if Humanoid then
-                    Humanoid.WalkSpeed = value
-                end
+            local Humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid then
+                Humanoid.WalkSpeed = value
             end
         end, "设置移速")
     end
 })
 
-Tabs.General:Section({Title = "跳跃高度设置"})
-
+-- 跳跃高度输入框
 Tabs.General:Textbox({
-    Title = "精确设置跳跃高度",
-    Desc = "输入精确的跳跃高度数值 (0.1 - 100)",
+    Title = "跳跃高度",
+    Desc = "输入精确数值 (0.1-100)",
     Default = "7.2",
-    Placeholder = "例如: 10.5, 25, 50...",
+    Placeholder = "输入跳跃高度...",
     Callback = function(value)
         safeCall(function()
             local jumpValue = tonumber(value)
-            
-            if not jumpValue then
-                WindUI:Notify({
-                    Title = "输入错误",
-                    Content = "请输入有效的数字",
-                    Duration = 3,
-                    Color = ColorSystem.errorColor
-                })
-                return
-            end
-            
-            if jumpValue < 0.1 or jumpValue > 100 then
-                WindUI:Notify({
-                    Title = "范围错误",
-                    Content = "跳跃高度必须在 0.1 到 100 之间",
-                    Duration = 3,
-                    Color = ColorSystem.errorColor
-                })
-                return
-            end
-            
-            local player = game.Players.LocalPlayer
-            if player and player.Character then
-                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if jumpValue and jumpValue >= 0.1 and jumpValue <= 100 then
+                local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid.UseJumpPower = false
                     humanoid.JumpHeight = jumpValue
-                    
                     WindUI:Notify({
-                        Title = "设置成功",
-                        Content = string.format("跳跃高度: %.2f", jumpValue),
-                        Duration = 3,
+                        Title = "成功",
+                        Content = string.format("跳跃高度: %.1f", jumpValue),
+                        Duration = 2,
                         Color = ColorSystem.successColor
                     })
                 end
+            else
+                WindUI:Notify({
+                    Title = "错误",
+                    Content = "请输入0.1-100之间的数字",
+                    Duration = 3,
+                    Color = ColorSystem.errorColor
+                })
             end
         end, "设置跳跃高度")
     end
 })
 
-Tabs.General:Section({Title = "重力设置"})
-
+-- 重力
 Tabs.General:Slider({
     Title = "重力",
-    Value = {
-        Min = 0.1,
-        Max = 500.0,
-        Default = 196.2,
-    },
+    Value = {Min = 0.1, Max = 500.0, Default = 196.2},
     Step = 0.1,
     Callback = function(value)
         safeCall(function()
